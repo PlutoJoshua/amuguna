@@ -1,0 +1,51 @@
+name: amuguna
+description: "음성 감정 분석 기반 의사결정 도우미 - Kanana-o AI"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.8.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+
+  # State management
+  flutter_riverpod: ^2.6.1
+
+  # Routing
+  go_router: ^14.6.2
+
+  # Audio
+  flutter_sound: ^9.16.3
+  just_audio: ^0.9.43
+
+  # Network
+  http: ^1.2.2
+
+  # Image
+  image_picker: ^1.1.2
+  image: ^4.3.0
+
+  # Permissions
+  permission_handler: ^11.3.1
+
+  # Kakao share
+  kakao_flutter_sdk_share: ^1.9.6
+
+  # Utils
+  uuid: ^4.5.1
+  path_provider: ^2.1.5
+  flutter_dotenv: ^5.2.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - .env

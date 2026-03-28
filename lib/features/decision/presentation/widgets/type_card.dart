@@ -1,0 +1,176 @@
+import 'package:flutter/material.dart';
+
+import '../../data/models/decision_type.dart';
+
+class TypeCard extends StatelessWidget {
+  final DecisionType type;
+  final String decision;
+  final int elapsedSeconds;
+
+  const TypeCard({
+    super.key,
+    required this.type,
+    required this.decision,
+    required this.elapsedSeconds,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(28),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            type.color,
+            type.color.withValues(alpha: 0.7),
+          ],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: type.color.withValues(alpha: 0.4),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 유형 이름
+          Text(
+            type.name,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              height: 1.2,
+            ),
+          ),
+          const SizedBox(height: 4),
+          // 유형 코드
+          Text(
+            type.code,
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.6),
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 2,
+            ),
+          ),
+          const SizedBox(height: 12),
+          // 설명
+          Text(
+            '"${type.description}"',
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.9),
+              fontSize: 16,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+          const SizedBox(height: 24),
+          // 스탯 바 3개
+          ...type.stats.map((stat) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: _buildStatBar(stat.label, stat.value),
+              )),
+          const SizedBox(height: 16),
+          // 궁합
+          Text(
+            type.compatibility,
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.7),
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(height: 20),
+          // 구분선
+          Container(
+            height: 1,
+            color: Colors.white.withValues(alpha: 0.2),
+          ),
+          const SizedBox(height: 16),
+          // 결정 내용
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '오늘의 결정: $decision',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              Text(
+                '${elapsedSeconds}초',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.7),
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          // 워터마크
+          Align(
+            alignment: Alignment.centerRight,
+            child: Text(
+              '아무거나 amuguna',
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.4),
+                fontSize: 11,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatBar(String label, int value) {
+    return Row(
+      children: [
+        SizedBox(
+          width: 52,
+          child: Text(
+            label,
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.8),
+              fontSize: 13,
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: value / 100,
+              minHeight: 8,
+              backgroundColor: Colors.white.withValues(alpha: 0.2),
+              valueColor: const AlwaysStoppedAnimation(Colors.white),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        SizedBox(
+          width: 32,
+          child: Text(
+            '$value%',
+            textAlign: TextAlign.right,
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.8),
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
