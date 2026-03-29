@@ -59,7 +59,9 @@ class KananaClient {
     });
     request.body = jsonEncode(body);
 
-    final response = await _httpClient.send(request);
+    final response = await _httpClient.send(request).timeout(
+          const Duration(seconds: 30),
+        );
 
     if (response.statusCode != 200) {
       final errorBody = await response.stream.bytesToString();

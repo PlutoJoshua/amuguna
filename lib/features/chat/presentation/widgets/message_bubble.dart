@@ -7,11 +7,13 @@ import 'emotion_gauge.dart';
 class MessageBubble extends StatelessWidget {
   final ChatMessage message;
   final VoidCallback? onPlayAudio;
+  final VoidCallback? onRetry;
 
   const MessageBubble({
     super.key,
     required this.message,
     this.onPlayAudio,
+    this.onRetry,
   });
 
   bool get isUser => message.role == MessageRole.user;
@@ -49,6 +51,8 @@ class MessageBubble extends StatelessWidget {
   }
 
   Widget _buildContent() {
+    if (message.isError) return _buildErrorContent();
+
     return Column(
       crossAxisAlignment:
           isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
@@ -112,6 +116,62 @@ class MessageBubble extends StatelessWidget {
           EmotionGauge(emotion: message.emotion!),
         ],
       ],
+    );
+  }
+
+  Widget _buildErrorContent() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppColors.recordingRed.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.error_outline,
+                  color: AppColors.recordingRed, size: 18),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  message.text,
+                  style: TextStyle(
+                    color: AppColors.recordingRed.withValues(alpha: 0.9),
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (onRetry != null) ...[
+            const SizedBox(height: 8),
+            GestureDetector(
+              onTap: onRetry,
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppColors.recordingRed.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.refresh, color: Colors.white70, size: 16),
+                    SizedBox(width: 4),
+                    Text(
+                      '다시 시도',
+                      style: TextStyle(color: Colors.white70, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

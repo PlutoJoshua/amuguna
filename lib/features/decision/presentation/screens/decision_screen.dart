@@ -1,3 +1,4 @@
+import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -15,9 +16,39 @@ class DecisionScreen extends ConsumerStatefulWidget {
   ConsumerState<DecisionScreen> createState() => _DecisionScreenState();
 }
 
-class _DecisionScreenState extends ConsumerState<DecisionScreen> {
+class _DecisionScreenState extends ConsumerState<DecisionScreen>
+    with TickerProviderStateMixin {
   bool _showTypeCard = false;
-  final _cardKey = GlobalKey();
+
+  late final ConfettiController _confettiController;
+  late final AnimationController _scaleController;
+  late final Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _confettiController =
+        ConfettiController(duration: const Duration(seconds: 3));
+    _scaleController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    _scaleAnimation = CurvedAnimation(
+      parent: _scaleController,
+      curve: Curves.elasticOut,
+    );
+
+    // 진입 시 축하 연출
+    _confettiController.play();
+    _scaleController.forward();
+  }
+
+  @override
+  void dispose() {
+    _confettiController.dispose();
+    _scaleController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -33,21 +64,42 @@ class _DecisionScreenState extends ConsumerState<DecisionScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 400),
-            child: _showTypeCard
-                ? _buildTypeCardPhase(decisionType, decision, seconds)
-                : _buildDecisionPhase(decision, seconds),
+      body: Stack(
+        children: [
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 400),
+                child: _showTypeCard
+                    ? _buildTypeCardPhase(decisionType, decision, seconds)
+                    : _buildDecisionPhase(decision, seconds),
+              ),
+            ),
           ),
-        ),
+          // Confetti 오버레이
+          Align(
+            alignment: Alignment.topCenter,
+            child: ConfettiWidget(
+              confettiController: _confettiController,
+              blastDirectionality: BlastDirectionality.explosive,
+              numberOfParticles: 25,
+              gravity: 0.1,
+              emissionFrequency: 0.03,
+              colors: const [
+                AppColors.primary,
+                AppColors.intuit,
+                AppColors.analyst,
+                AppColors.vibe,
+                AppColors.zen,
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  /// Phase 1: 결정 완료
   Widget _buildDecisionPhase(String decision, int seconds) {
     return Column(
       key: const ValueKey('decision'),
@@ -64,12 +116,16 @@ class _DecisionScreenState extends ConsumerState<DecisionScreen> {
           ),
         ),
         const SizedBox(height: 8),
-        Text(
-          decision,
-          style: const TextStyle(
-            color: AppColors.textPrimary,
-            fontSize: 36,
-            fontWeight: FontWeight.bold,
+        // 스케일 애니메이션
+        ScaleTransition(
+          scale: _scaleAnimation,
+          child: Text(
+            decision,
+            style: const TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 36,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
         const SizedBox(height: 16),
@@ -88,7 +144,6 @@ class _DecisionScreenState extends ConsumerState<DecisionScreen> {
           ),
         ),
         const Spacer(),
-        // 결정 유형 보기 버튼
         SizedBox(
           width: double.infinity,
           child: ElevatedButton(
@@ -108,7 +163,6 @@ class _DecisionScreenState extends ConsumerState<DecisionScreen> {
           ),
         ),
         const SizedBox(height: 12),
-        // 처음으로
         TextButton(
           onPressed: () {
             ref.read(chatNotifierProvider.notifier).resetSession();
@@ -123,13 +177,11 @@ class _DecisionScreenState extends ConsumerState<DecisionScreen> {
     );
   }
 
-  /// Phase 2: 유형 카드
   Widget _buildTypeCardPhase(
       DecisionType type, String decision, int seconds) {
     return Column(
       key: const ValueKey('typecard'),
       children: [
-        // 뒤로
         Align(
           alignment: Alignment.centerLeft,
           child: IconButton(
@@ -139,48 +191,31 @@ class _DecisionScreenState extends ConsumerState<DecisionScreen> {
           ),
         ),
         const Spacer(),
-        // TypeCard
-        RepaintBoundary(
-          key: _cardKey,
-          child: TypeCard(
-            type: type,
-            decision: decision,
-            elapsedSeconds: seconds,
-          ),
+        TypeCard(
+          type: type,
+          decision: decision,
+          elapsedSeconds: seconds,
         ),
         const Spacer(),
-        // 카카오톡 공유
         SizedBox(
           width: double.infinity,
-          child: ElevatedButton.icon(
+          child: ElevatedButton(
             onPressed: () {
-              // TODO: 카카오톡 공유
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('카카오톡 공유 기능 준비 중')),
-              );
+              ref.read(chatNotifierProvider.notifier).resetSession();
+              context.go('/');
             },
-            icon: const Icon(Icons.share),
-            label: const Text('카카오톡으로 공유하기'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFFEE500),
-              foregroundColor: Colors.black87,
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.black,
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14),
               ),
             ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        // 처음으로
-        TextButton(
-          onPressed: () {
-            ref.read(chatNotifierProvider.notifier).resetSession();
-            context.go('/');
-          },
-          child: const Text(
-            '처음으로 돌아가기',
-            style: TextStyle(color: AppColors.textSecondary),
+            child: const Text(
+              '처음으로 돌아가기',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
           ),
         ),
       ],

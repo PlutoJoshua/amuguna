@@ -29,9 +29,10 @@ class ChatMessage {
   final String id;
   final MessageRole role;
   final String text;
-  final String? audioBase64; // AI 음성 응답
+  final String? audioBase64;
   final EmotionData? emotion;
   final DateTime timestamp;
+  final bool isError;
 
   ChatMessage({
     required this.id,
@@ -39,6 +40,7 @@ class ChatMessage {
     required this.text,
     this.audioBase64,
     this.emotion,
+    this.isError = false,
     DateTime? timestamp,
   }) : timestamp = timestamp ?? DateTime.now();
 
@@ -46,6 +48,7 @@ class ChatMessage {
     String? text,
     String? audioBase64,
     EmotionData? emotion,
+    bool? isError,
   }) {
     return ChatMessage(
       id: id,
@@ -53,6 +56,7 @@ class ChatMessage {
       text: text ?? this.text,
       audioBase64: audioBase64 ?? this.audioBase64,
       emotion: emotion ?? this.emotion,
+      isError: isError ?? this.isError,
       timestamp: timestamp,
     );
   }

@@ -6,12 +6,14 @@ class RecordButton extends StatefulWidget {
   final bool isRecording;
   final bool isProcessing;
   final VoidCallback onTap;
+  final int recordingSeconds;
 
   const RecordButton({
     super.key,
     required this.isRecording,
     required this.isProcessing,
     required this.onTap,
+    this.recordingSeconds = 0,
   });
 
   @override
@@ -90,11 +92,22 @@ class _RecordButtonState extends State<RecordButton>
                         ),
                       ],
               ),
-              child: Icon(
-                widget.isRecording ? Icons.stop : Icons.mic,
-                color: widget.isRecording ? Colors.white : Colors.black,
-                size: 28,
-              ),
+              child: widget.isRecording
+                  ? Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          '${widget.recordingSeconds ~/ 60}:${(widget.recordingSeconds % 60).toString().padLeft(2, '0')}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const Icon(Icons.stop, color: Colors.white, size: 22),
+                      ],
+                    )
+                  : const Icon(Icons.mic, color: Colors.black, size: 28),
             ),
           );
         },

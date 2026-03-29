@@ -59,6 +59,10 @@ class ChatState {
   final String? decision;
   final EmotionData? currentEmotion;
   final List<EmotionData> emotionHistory;
+  final String? lastUserText;
+  final double currentAmplitude;
+  final int recordingDurationSeconds;
+  final List<String> quickReplies;
 
   const ChatState({
     this.messages = const [],
@@ -72,6 +76,10 @@ class ChatState {
     this.decision,
     this.currentEmotion,
     this.emotionHistory = const [],
+    this.lastUserText,
+    this.currentAmplitude = -160.0,
+    this.recordingDurationSeconds = 0,
+    this.quickReplies = const [],
   });
 
   ChatState copyWith({
@@ -85,6 +93,10 @@ class ChatState {
     String? decision,
     EmotionData? currentEmotion,
     List<EmotionData>? emotionHistory,
+    String? lastUserText,
+    double? currentAmplitude,
+    int? recordingDurationSeconds,
+    List<String>? quickReplies,
   }) {
     return ChatState(
       messages: messages ?? this.messages,
@@ -98,6 +110,11 @@ class ChatState {
       decision: decision ?? this.decision,
       currentEmotion: currentEmotion ?? this.currentEmotion,
       emotionHistory: emotionHistory ?? this.emotionHistory,
+      lastUserText: lastUserText ?? this.lastUserText,
+      currentAmplitude: currentAmplitude ?? this.currentAmplitude,
+      recordingDurationSeconds:
+          recordingDurationSeconds ?? this.recordingDurationSeconds,
+      quickReplies: quickReplies ?? this.quickReplies,
     );
   }
 
@@ -112,6 +129,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
   final AudioRecorderService _recorder;
   final AudioPlayerService _player;
   static const _uuid = Uuid();
+  StreamSubscription<double>? _amplitudeSub;
+  Timer? _recordingTimer;
 
   ChatNotifier({
     required ChatRepository repository,
@@ -149,14 +168,41 @@ class ChatNotifier extends StateNotifier<ChatState> {
   Future<void> _startRecording() async {
     try {
       await _recorder.startRecording();
-      state = state.copyWith(isRecording: true);
+      state = state.copyWith(
+        isRecording: true,
+        quickReplies: [],
+        recordingDurationSeconds: 0,
+        currentAmplitude: -160.0,
+      );
+
+      // amplitude 구독
+      _amplitudeSub = _recorder.amplitudeStream.listen((db) {
+        if (mounted) {
+          state = state.copyWith(currentAmplitude: db);
+        }
+      });
+
+      // 녹음 시간 타이머
+      _recordingTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+        if (mounted) {
+          state = state.copyWith(
+            recordingDurationSeconds: state.recordingDurationSeconds + 1,
+          );
+        }
+      });
     } catch (e) {
       // 권한 거부 등
     }
   }
 
   Future<void> _stopAndSend() async {
-    state = state.copyWith(isRecording: false);
+    _amplitudeSub?.cancel();
+    _recordingTimer?.cancel();
+    state = state.copyWith(
+      isRecording: false,
+      currentAmplitude: -160.0,
+      recordingDurationSeconds: 0,
+    );
     final audioBase64 = await _recorder.stopRecording();
     if (audioBase64 == null) return;
 
@@ -184,6 +230,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
   /// 텍스트 메시지 전송
   Future<void> sendTextMessage(String text) async {
     if (text.trim().isEmpty || state.isStreaming) return;
+    // 퀵 리플라이 초기화
+    state = state.copyWith(quickReplies: []);
 
     final userMessage = ChatMessage(
       id: _uuid.v4(),
@@ -206,6 +254,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
       messages: [...state.messages, userMessage],
       apiHistory: updatedHistory,
       isStreaming: true,
+      lastUserText: text,
     );
 
     await _streamResponse(
@@ -263,9 +312,17 @@ class ChatNotifier extends StateNotifier<ChatState> {
       }
     } catch (e) {
       debugPrint('Stream error: $e');
-      if (latestContent.isEmpty && latestTranscript.isEmpty) {
-        latestContent = '죄송해요, 잠시 문제가 생겼어요. 다시 말해주세요!';
+      String errorMsg;
+      if (e is KananaApiException) {
+        errorMsg = '서버 연결에 문제가 생겼어요. (${e.statusCode})';
+      } else if (e is TimeoutException) {
+        errorMsg = '응답 시간이 초과됐어요.';
+      } else {
+        errorMsg = '네트워크 연결을 확인해주세요.';
       }
+      _updateAssistantMessage(assistantId, errorMsg, isError: true);
+      state = state.copyWith(isStreaming: false);
+      return;
     }
 
     // content가 있으면 content 사용, 없으면 transcript 사용
@@ -276,10 +333,12 @@ class ChatNotifier extends StateNotifier<ChatState> {
     debugPrint('Response: content=${latestContent.length}ch, '
         'transcript=${latestTranscript.length}ch');
 
-    // 감정 + 결정 데이터 파싱
+    // 감정 + 결정 + 퀵 리플라이 파싱
     final emotion = _parseEmotion(displayText);
     final parsedDecision = _parseDecision(displayText);
-    final cleanText = _removeDecisionTag(_removeEmotionTag(displayText));
+    final parsedQuickReplies = _parseQuickReplies(displayText);
+    final cleanText = _removeQuickReplyTag(
+        _removeDecisionTag(_removeEmotionTag(displayText)));
 
     // 오디오 청크 합치기 → 다시 Base64로
     String? audioData;
@@ -324,6 +383,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
           ? [...state.emotionHistory, emotion]
           : state.emotionHistory,
       decision: parsedDecision ?? state.decision,
+      quickReplies: parsedQuickReplies,
     );
 
     // 오디오 자동 재생
@@ -339,6 +399,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
     String text, {
     String? audioBase64,
     EmotionData? emotion,
+    bool isError = false,
   }) {
     final messages = state.messages.map((m) {
       if (m.id == id) {
@@ -346,6 +407,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
           text: _removeEmotionTag(text),
           audioBase64: audioBase64,
           emotion: emotion,
+          isError: isError,
         );
       }
       return m;
@@ -387,6 +449,24 @@ class ChatNotifier extends StateNotifier<ChatState> {
     return text
         .replaceAll(
             RegExp(r'\[DECISION\].*?\[/DECISION\]', dotAll: true), '')
+        .trim();
+  }
+
+  /// [QUICK_REPLY]옵션1|옵션2|옵션3[/QUICK_REPLY] 태그에서 빠른 답장 파싱
+  List<String> _parseQuickReplies(String text) {
+    final regex =
+        RegExp(r'\[QUICK_REPLY\](.*?)\[/QUICK_REPLY\]', dotAll: true);
+    final match = regex.firstMatch(text);
+    if (match == null) return [];
+    final raw = match.group(1)?.trim();
+    if (raw == null || raw.isEmpty) return [];
+    return raw.split('|').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
+  }
+
+  String _removeQuickReplyTag(String text) {
+    return text
+        .replaceAll(
+            RegExp(r'\[QUICK_REPLY\].*?\[/QUICK_REPLY\]', dotAll: true), '')
         .trim();
   }
 
@@ -438,6 +518,18 @@ class ChatNotifier extends StateNotifier<ChatState> {
   /// 결정 확정
   void confirmDecision(String decision) {
     state = state.copyWith(decision: decision);
+  }
+
+  /// 마지막 메시지 재시도 (에러 메시지 제거 후 재전송)
+  Future<void> retryLastMessage() async {
+    final lastText = state.lastUserText;
+    if (lastText == null) return;
+
+    // 에러 메시지 제거
+    final filtered = state.messages.where((m) => !m.isError).toList();
+    state = state.copyWith(messages: filtered);
+
+    await sendTextMessage(lastText);
   }
 
   /// 디버그용: 테스트 오디오를 API로 전송

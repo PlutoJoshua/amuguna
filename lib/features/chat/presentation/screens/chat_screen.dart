@@ -9,6 +9,7 @@ import '../../../../core/debug/test_audio_generator.dart';
 import '../../data/models/chat_message.dart';
 import '../providers/chat_provider.dart';
 import '../widgets/message_bubble.dart';
+import '../widgets/quick_reply_chips.dart';
 import '../widgets/record_button.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
@@ -135,6 +136,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                 .playBase64Audio(message.audioBase64!);
                           }
                         : null,
+                    onRetry: message.isError
+                        ? () {
+                            ref
+                                .read(chatNotifierProvider.notifier)
+                                .retryLastMessage();
+                          }
+                        : null,
                   );
                 },
               ),
@@ -150,6 +158,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     _TypingIndicator(),
                   ],
                 ),
+              ),
+
+            // 빠른 답장 칩
+            if (chatState.quickReplies.isNotEmpty &&
+                !chatState.isStreaming &&
+                !chatState.isRecording)
+              QuickReplyChips(
+                replies: chatState.quickReplies,
+                onTap: (reply) {
+                  ref.read(chatNotifierProvider.notifier).sendTextMessage(reply);
+                },
               ),
 
             // 입력 영역
@@ -218,6 +237,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               RecordButton(
                 isRecording: chatState.isRecording,
                 isProcessing: chatState.isStreaming,
+                recordingSeconds: chatState.recordingDurationSeconds,
                 onTap: chatState.isStreaming
                     ? () {}
                     : () {
@@ -229,20 +249,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             ],
           ),
           const SizedBox(height: 8),
-          // 상태 텍스트
-          Text(
-            chatState.isRecording
-                ? AppStrings.recording
-                : chatState.isStreaming
-                    ? AppStrings.processing
-                    : AppStrings.tapToRecord,
-            style: TextStyle(
-              color: chatState.isRecording
-                  ? AppColors.recordingRed
-                  : AppColors.textSecondary,
-              fontSize: 12,
-            ),
-          ),
+          // 상태: 파형 바 or 텍스트
+          chatState.isRecording
+              ? _AudioWaveBar(amplitude: chatState.currentAmplitude)
+              : Text(
+                  chatState.isStreaming
+                      ? AppStrings.processing
+                      : AppStrings.tapToRecord,
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12,
+                  ),
+                ),
         ],
       ),
     );
@@ -335,6 +353,37 @@ class _TypingIndicatorState extends State<_TypingIndicator>
           }),
         );
       },
+    );
+  }
+}
+
+class _AudioWaveBar extends StatelessWidget {
+  final double amplitude;
+
+  const _AudioWaveBar({required this.amplitude});
+
+  @override
+  Widget build(BuildContext context) {
+    // amplitude는 dB (-160 ~ 0), 0.0~1.0으로 정규화
+    final normalized = ((amplitude + 50) / 50).clamp(0.0, 1.0);
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(7, (i) {
+        // 각 바에 약간의 변화를 줌
+        final barHeight =
+            4.0 + (normalized * 16.0 * (1.0 - (i - 3).abs() / 4.0));
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 100),
+          margin: const EdgeInsets.symmetric(horizontal: 2),
+          width: 3,
+          height: barHeight,
+          decoration: BoxDecoration(
+            color: AppColors.recordingRed,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        );
+      }),
     );
   }
 }
