@@ -1,12 +1,23 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app.dart';
 
-Future<void> main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load(fileName: '.env');
+
+  // 글로벌 에러 핸들러
+  FlutterError.onError = (details) {
+    FlutterError.presentError(details);
+  };
+
+  PlatformDispatcher.instance.onError = (error, stack) {
+    debugPrint('Uncaught error: $error\n$stack');
+    return true;
+  };
+
   runApp(
     const ProviderScope(
       child: AmugunaApp(),

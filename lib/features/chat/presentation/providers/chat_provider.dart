@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../../core/audio/audio_player_service.dart';
@@ -131,6 +132,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
   static const _uuid = Uuid();
   StreamSubscription<double>? _amplitudeSub;
   Timer? _recordingTimer;
+  bool _disposed = false;
 
   ChatNotifier({
     required ChatRepository repository,
@@ -143,8 +145,15 @@ class ChatNotifier extends StateNotifier<ChatState> {
           sessionId: _uuid.v4(),
           startTime: DateTime.now(),
         )) {
-    // 초기 인사 메시지
     _addAssistantGreeting();
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    _amplitudeSub?.cancel();
+    _recordingTimer?.cancel();
+    super.dispose();
   }
 
   void _addAssistantGreeting() {
@@ -166,6 +175,19 @@ class ChatNotifier extends StateNotifier<ChatState> {
   }
 
   Future<void> _startRecording() async {
+    // 마이크 권한 요청
+    final status = await Permission.microphone.request();
+    if (!status.isGranted) {
+      final errorMsg = ChatMessage(
+        id: _uuid.v4(),
+        role: MessageRole.assistant,
+        text: '마이크 권한이 필요해요. 설정에서 마이크를 허용해주세요.',
+        isError: true,
+      );
+      state = state.copyWith(messages: [...state.messages, errorMsg]);
+      return;
+    }
+
     try {
       await _recorder.startRecording();
       state = state.copyWith(
@@ -177,21 +199,27 @@ class ChatNotifier extends StateNotifier<ChatState> {
 
       // amplitude 구독
       _amplitudeSub = _recorder.amplitudeStream.listen((db) {
-        if (mounted) {
+        if (!_disposed) {
           state = state.copyWith(currentAmplitude: db);
         }
       });
 
       // 녹음 시간 타이머
       _recordingTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-        if (mounted) {
+        if (!_disposed) {
           state = state.copyWith(
             recordingDurationSeconds: state.recordingDurationSeconds + 1,
           );
         }
       });
     } catch (e) {
-      // 권한 거부 등
+      final errorMsg = ChatMessage(
+        id: _uuid.v4(),
+        role: MessageRole.assistant,
+        text: '녹음을 시작할 수 없어요. 다시 시도해주세요.',
+        isError: true,
+      );
+      state = state.copyWith(messages: [...state.messages, errorMsg]);
     }
   }
 

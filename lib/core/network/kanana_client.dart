@@ -127,7 +127,7 @@ class KananaClient {
         'Authorization': 'Bearer $apiKey',
       },
       body: jsonEncode(body),
-    );
+    ).timeout(const Duration(seconds: 60));
 
     if (response.statusCode != 200) {
       throw KananaApiException(

@@ -10,6 +10,31 @@
 
 ---
 
+## 🚀 빠른 시작
+
+### 요구사항
+
+- Flutter 3.29+ / Dart 3.8+
+- Kanana-o API 키
+
+### 실행
+
+```bash
+# 의존성 설치
+flutter pub get
+
+# 실행 (API 키를 --dart-define으로 전달)
+flutter run --dart-define=KANANA_API_KEY=your_api_key_here
+
+# 릴리즈 빌드
+flutter build apk --dart-define=KANANA_API_KEY=your_api_key_here
+flutter build ios --dart-define=KANANA_API_KEY=your_api_key_here
+```
+
+> **참고**: API 키는 `.env` 파일이 아닌 `--dart-define`으로 빌드 시 주입됩니다. 코드에 키를 직접 넣지 마세요.
+
+---
+
 ## 📋 목차
 
 - [프로젝트 개요](#프로젝트-개요)
