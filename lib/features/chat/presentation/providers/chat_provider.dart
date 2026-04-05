@@ -335,7 +335,9 @@ class ChatNotifier extends StateNotifier<ChatState> {
         if (chunk.audioDelta != null) {
           try {
             audioChunks.add(base64Decode(chunk.audioDelta!));
-          } catch (_) {}
+          } catch (e) {
+            debugPrint('Audio chunk decode failed: $e');
+          }
         }
       }
     } catch (e) {
@@ -413,7 +415,9 @@ class ChatNotifier extends StateNotifier<ChatState> {
     if (audioData != null) {
       try {
         await _player.playBase64Audio(audioData);
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('Auto-play audio failed: $e');
+      }
     }
   }
 

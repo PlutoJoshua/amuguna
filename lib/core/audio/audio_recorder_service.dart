@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter_sound/flutter_sound.dart';
 import 'package:path_provider/path_provider.dart';
@@ -27,9 +28,13 @@ class AudioRecorderService {
 
   Future<void> _ensureInitialized() async {
     if (_isInitialized) return;
-    await _recorder.openRecorder();
-    await _recorder.setSubscriptionDuration(const Duration(milliseconds: 250));
-    _isInitialized = true;
+    try {
+      await _recorder.openRecorder();
+      await _recorder.setSubscriptionDuration(const Duration(milliseconds: 250));
+      _isInitialized = true;
+    } catch (e) {
+      throw Exception('녹음기 초기화 실패: $e');
+    }
   }
 
   /// 녹음 시작 (PCM 16kHz mono)
@@ -64,7 +69,13 @@ class AudioRecorderService {
 
     _dbSub?.cancel();
 
-    await _recorder.stopRecorder();
+    try {
+      await _recorder.stopRecorder();
+    } catch (e) {
+      _state = RecordingState.idle;
+      _stateController.add(_state);
+      return null;
+    }
 
     final path = _currentPath;
     if (path == null) {
@@ -80,20 +91,27 @@ class AudioRecorderService {
       return null;
     }
 
-    final pcmData = await pcmFile.readAsBytes();
+    final Uint8List pcmData;
+    try {
+      pcmData = await pcmFile.readAsBytes();
+    } catch (e) {
+      _state = RecordingState.idle;
+      _stateController.add(_state);
+      return null;
+    }
 
     // 너무 짧은 녹음은 무시 (0.5초 미만 = 16000 bytes)
     if (pcmData.length < 16000) {
       _state = RecordingState.idle;
       _stateController.add(_state);
-      await pcmFile.delete();
+      try { await pcmFile.delete(); } catch (_) {}
       return null;
     }
 
     final wavData = WavEncoder.encode(pcmData);
     final base64Wav = base64Encode(wavData);
 
-    await pcmFile.delete();
+    try { await pcmFile.delete(); } catch (_) {}
 
     _state = RecordingState.idle;
     _stateController.add(_state);

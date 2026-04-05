@@ -146,10 +146,6 @@ class _MenuScanScreenState extends ConsumerState<MenuScanScreen> {
     final repository = ref.read(chatRepositoryProvider);
 
     try {
-      chatNotifier.startModeB();
-      if (!mounted) return;
-      context.go('/chat');
-
       // 모든 이미지를 Base64로 변환
       final base64Images = <String>[];
       for (final file in _imageFiles) {
@@ -158,11 +154,17 @@ class _MenuScanScreenState extends ConsumerState<MenuScanScreen> {
       }
 
       final result = await repository.analyzeMenu(base64Images);
+
+      chatNotifier.startModeB();
       chatNotifier.completeModeB(result);
+      if (!mounted) return;
+      context.go('/chat');
     } catch (e) {
-      chatNotifier.completeModeB(
-        '메뉴판 분석에 실패했어요. 홈으로 돌아가서 다시 시도해주세요.',
-      );
+      if (!mounted) return;
+      setState(() {
+        _isAnalyzing = false;
+        _error = '메뉴판 분석에 실패했어요. 다시 시도해주세요.';
+      });
     }
   }
 

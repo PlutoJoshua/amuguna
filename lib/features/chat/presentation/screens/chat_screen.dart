@@ -109,10 +109,20 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   return MessageBubble(
                     message: message,
                     onPlayAudio: message.audioBase64 != null
-                        ? () {
-                            ref
-                                .read(audioPlayerProvider)
-                                .playBase64Audio(message.audioBase64!);
+                        ? () async {
+                            try {
+                              await ref
+                                  .read(audioPlayerProvider)
+                                  .playBase64Audio(message.audioBase64!);
+                            } catch (e) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('음성 재생에 실패했어요'),
+                                  ),
+                                );
+                              }
+                            }
                           }
                         : null,
                     onRetry: message.isError

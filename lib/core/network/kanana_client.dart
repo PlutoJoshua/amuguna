@@ -95,8 +95,10 @@ class KananaClient {
           final json = jsonDecode(jsonStr) as Map<String, dynamic>;
           final chunk = _parseChunk(json);
           if (chunk != null) yield chunk;
-        } catch (_) {
-          // 파싱 실패한 청크는 무시
+        } catch (e) {
+          // 파싱 실패한 청크 로깅 후 계속 진행
+          // ignore: avoid_print
+          print('SSE chunk parse failed: $e');
         }
       }
     }

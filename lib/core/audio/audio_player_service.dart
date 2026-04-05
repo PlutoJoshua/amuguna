@@ -18,7 +18,8 @@ class AudioPlayerService {
       final wavBytes = _ensureWavFormat(bytes);
       await playBytes(wavBytes);
     } catch (e) {
-      // 재생 실패 시 무시 (텍스트 응답은 이미 표시됨)
+      // 텍스트 응답은 ��미 표시되지만, 호출자가 처리할 수 있도록 rethrow
+      rethrow;
     }
   }
 
