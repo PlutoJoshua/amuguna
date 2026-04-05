@@ -1,26 +1,30 @@
-import 'dart:ui';
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app.dart';
+import 'core/utils/app_logger.dart';
 
 void main() {
-  WidgetsFlutterBinding.ensureInitialized();
+  runZonedGuarded(() {
+    WidgetsFlutterBinding.ensureInitialized();
 
-  // 글로벌 에러 핸들러
-  FlutterError.onError = (details) {
-    FlutterError.presentError(details);
-  };
+    FlutterError.onError = (details) {
+      FlutterError.presentError(details);
+      AppLogger.error(
+        'Flutter error',
+        error: details.exception,
+        stack: details.stack,
+      );
+    };
 
-  PlatformDispatcher.instance.onError = (error, stack) {
-    debugPrint('Uncaught error: $error\n$stack');
-    return true;
-  };
-
-  runApp(
-    const ProviderScope(
-      child: AmugunaApp(),
-    ),
-  );
+    runApp(
+      const ProviderScope(
+        child: AmugunaApp(),
+      ),
+    );
+  }, (error, stack) {
+    AppLogger.error('Uncaught error', error: error, stack: stack);
+  });
 }
