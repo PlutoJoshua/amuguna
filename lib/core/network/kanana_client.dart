@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import '../constants/api_config.dart';
@@ -94,13 +93,6 @@ class KananaClient {
         final jsonStr = trimmed.substring(6);
         try {
           final json = jsonDecode(jsonStr) as Map<String, dynamic>;
-          // RAW 로그: API 응답 구조 디버깅
-          final choices = json['choices'] as List?;
-          if (choices != null && choices.isNotEmpty) {
-            final delta = choices[0]['delta'];
-            final keys = (delta as Map?)?.keys.toList() ?? [];
-            debugPrint('SSE delta keys: $keys');
-          }
           final chunk = _parseChunk(json);
           if (chunk != null) yield chunk;
         } catch (_) {
@@ -165,10 +157,6 @@ class KananaClient {
     if (textDelta == null && audioDelta == null && audioTranscript == null) {
       return null;
     }
-
-    debugPrint('Chunk: content=${textDelta != null ? "${textDelta.length}ch" : "-"} '
-        'transcript=${audioTranscript != null ? "${audioTranscript.length}ch" : "-"} '
-        'audio=${audioDelta != null ? "${audioDelta.length}ch" : "-"}');
 
     return KananaStreamChunk(
       textDelta: textDelta,

@@ -358,9 +358,6 @@ class ChatNotifier extends StateNotifier<ChatState> {
         ? latestContent
         : latestTranscript;
 
-    debugPrint('Response: content=${latestContent.length}ch, '
-        'transcript=${latestTranscript.length}ch');
-
     // 감정 + 결정 + 퀵 리플라이 파싱
     final emotion = _parseEmotion(displayText);
     final parsedDecision = _parseDecision(displayText);
@@ -379,8 +376,6 @@ class ChatNotifier extends StateNotifier<ChatState> {
         offset += chunk.length;
       }
       audioData = base64Encode(combined);
-      debugPrint('Audio: ${combined.length} bytes, '
-          'first 4: ${combined.take(4).toList()}');
     }
 
     // 최종 메시지 업데이트
@@ -558,28 +553,6 @@ class ChatNotifier extends StateNotifier<ChatState> {
     state = state.copyWith(messages: filtered);
 
     await sendTextMessage(lastText);
-  }
-
-  /// 디버그용: 테스트 오디오를 API로 전송
-  Future<void> sendTestAudio(String audioBase64) async {
-    final userMessage = ChatMessage(
-      id: _uuid.v4(),
-      role: MessageRole.user,
-      text: '🎙️ [테스트 음성]',
-    );
-
-    state = state.copyWith(
-      messages: [...state.messages, userMessage],
-      isStreaming: true,
-    );
-
-    await _streamResponse(
-      stream: _repository.sendVoiceMessage(
-        audioBase64: audioBase64,
-        history: state.apiHistory,
-        mode: state.mode,
-      ),
-    );
   }
 
   /// 세션 리셋

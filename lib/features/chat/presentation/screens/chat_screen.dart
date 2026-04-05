@@ -1,11 +1,9 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_strings.dart';
-import '../../../../core/debug/test_audio_generator.dart';
 import '../../data/models/chat_message.dart';
 import '../providers/chat_provider.dart';
 import '../widgets/message_bubble.dart';
@@ -89,25 +87,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           ],
         ),
         actions: [
-          if (kDebugMode)
-            PopupMenuButton<String>(
-              icon: const Icon(Icons.bug_report, color: Colors.amber, size: 20),
-              onSelected: (value) => _handleDebugAction(value),
-              itemBuilder: (_) => [
-                const PopupMenuItem(
-                  value: 'test_playback',
-                  child: Text('🔊 음성 재생 테스트'),
-                ),
-                const PopupMenuItem(
-                  value: 'test_api_audio',
-                  child: Text('🎙️ 샘플 음성 → API'),
-                ),
-                const PopupMenuItem(
-                  value: 'test_api_text',
-                  child: Text('💬 "아무거나" 텍스트 전송'),
-                ),
-              ],
-            ),
           IconButton(
             icon: const Icon(Icons.refresh, color: AppColors.textSecondary),
             onPressed: () {
@@ -264,37 +243,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ],
       ),
     );
-  }
-
-  void _handleDebugAction(String action) {
-    switch (action) {
-      case 'test_playback':
-        // 로컬에서 WAV 생성 → 바로 재생 (API 없이)
-        final testWav = TestAudioGenerator.generateTestOutputWav();
-        ref.read(audioPlayerProvider).playBytes(testWav).then((_) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('재생 완료!')),
-          );
-        }).catchError((e) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('재생 실패: $e')),
-          );
-        });
-        break;
-
-      case 'test_api_audio':
-        // 샘플 WAV → Kanana-o API (음성 입력 파이프라인 테스트)
-        final base64Audio = TestAudioGenerator.generateTestInputBase64();
-        ref.read(chatNotifierProvider.notifier).sendTestAudio(base64Audio);
-        break;
-
-      case 'test_api_text':
-        // "아무거나" 텍스트 전송
-        ref.read(chatNotifierProvider.notifier).sendTextMessage(
-          '아 점심 뭐 먹지... 아무거나',
-        );
-        break;
-    }
   }
 
   void _sendText() {

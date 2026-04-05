@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
 
 class AudioPlayerService {
@@ -24,8 +23,6 @@ class AudioPlayerService {
   }
 
   Future<void> playBytes(Uint8List bytes) async {
-    debugPrint('AudioPlayer: playing ${bytes.length} bytes, '
-        'first 4: ${bytes.take(4).toList()}');
     final source = _BytesAudioSource(bytes);
     await _player.setAudioSource(source);
     await _player.play();
