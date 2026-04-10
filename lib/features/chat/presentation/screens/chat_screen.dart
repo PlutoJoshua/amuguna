@@ -4,10 +4,12 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_strings.dart';
+import '../../../../core/services/api_usage_service.dart';
 import '../../data/models/chat_message.dart';
 import '../providers/chat_provider.dart';
 import '../widgets/message_bubble.dart';
 import '../widgets/quick_reply_chips.dart';
+import '../widgets/quota_exhausted_overlay.dart';
 import '../widgets/record_button.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
@@ -66,6 +68,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       }
     });
 
+    final remainingCalls = ref.watch(remainingCallsProvider);
+
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
@@ -87,6 +91,32 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           ],
         ),
         actions: [
+          // API 호출 카운터
+          Center(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: remainingCalls <= 5
+                      ? AppColors.recordingRed.withValues(alpha: 0.5)
+                      : AppColors.primary.withValues(alpha: 0.3),
+                ),
+              ),
+              child: Text(
+                '🎫 $remainingCalls/${ApiUsageService.dailyLimit}',
+                style: TextStyle(
+                  color: remainingCalls <= 5
+                      ? AppColors.recordingRed
+                      : AppColors.primary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 4),
           IconButton(
             icon: const Icon(Icons.refresh, color: AppColors.textSecondary),
             onPressed: () {
@@ -95,7 +125,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           ),
         ],
       ),
-      body: SafeArea(
+      body: Stack(
+        children: [
+          SafeArea(
         child: Column(
           children: [
             // 대화 영역
@@ -164,6 +196,16 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             _buildInputArea(chatState),
           ],
         ),
+          ),
+          // 쿼터 소진 오버레이
+          if (chatState.quotaExhausted)
+            QuotaExhaustedOverlay(
+              onGoHome: () {
+                ref.read(chatNotifierProvider.notifier).resetSession();
+                context.go('/');
+              },
+            ),
+        ],
       ),
     );
   }

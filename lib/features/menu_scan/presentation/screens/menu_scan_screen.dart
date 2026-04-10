@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -19,7 +19,8 @@ class MenuScanScreen extends ConsumerStatefulWidget {
 
 class _MenuScanScreenState extends ConsumerState<MenuScanScreen> {
   final _picker = ImagePicker();
-  final List<File> _imageFiles = [];
+  final List<XFile> _pickedFiles = [];
+  final List<Uint8List> _pickedBytes = [];
   bool _isAnalyzing = false;
   String? _error;
 
@@ -97,8 +98,10 @@ class _MenuScanScreenState extends ConsumerState<MenuScanScreen> {
       );
       if (xFile == null) return;
 
+      final bytes = await xFile.readAsBytes();
       setState(() {
-        _imageFiles.add(File(xFile.path));
+        _pickedFiles.add(xFile);
+        _pickedBytes.add(bytes);
         _error = null;
       });
     } catch (e) {
@@ -117,8 +120,13 @@ class _MenuScanScreenState extends ConsumerState<MenuScanScreen> {
       );
       if (xFiles.isEmpty) return;
 
+      final bytesList = <Uint8List>[];
+      for (final xFile in xFiles) {
+        bytesList.add(await xFile.readAsBytes());
+      }
       setState(() {
-        _imageFiles.addAll(xFiles.map((f) => File(f.path)));
+        _pickedFiles.addAll(xFiles);
+        _pickedBytes.addAll(bytesList);
         _error = null;
       });
     } catch (e) {
@@ -130,12 +138,13 @@ class _MenuScanScreenState extends ConsumerState<MenuScanScreen> {
 
   void _removeImage(int index) {
     setState(() {
-      _imageFiles.removeAt(index);
+      _pickedFiles.removeAt(index);
+      _pickedBytes.removeAt(index);
     });
   }
 
   Future<void> _analyzeAndNavigate() async {
-    if (_imageFiles.isEmpty) return;
+    if (_pickedFiles.isEmpty) return;
 
     setState(() {
       _isAnalyzing = true;
@@ -148,8 +157,7 @@ class _MenuScanScreenState extends ConsumerState<MenuScanScreen> {
     try {
       // 모든 이미지를 Base64로 변환
       final base64Images = <String>[];
-      for (final file in _imageFiles) {
-        final bytes = await file.readAsBytes();
+      for (final bytes in _pickedBytes) {
         base64Images.add('data:image/jpeg;base64,${base64Encode(bytes)}');
       }
 
@@ -191,7 +199,7 @@ class _MenuScanScreenState extends ConsumerState<MenuScanScreen> {
           child: Column(
             children: [
               Expanded(
-                child: _imageFiles.isNotEmpty
+                child: _pickedFiles.isNotEmpty
                     ? _buildImageGrid()
                     : _buildEmptyState(),
               ),
@@ -243,14 +251,14 @@ class _MenuScanScreenState extends ConsumerState<MenuScanScreen> {
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
       ),
-      itemCount: _imageFiles.length,
+      itemCount: _pickedFiles.length,
       itemBuilder: (context, index) {
         return ClipRRect(
           borderRadius: BorderRadius.circular(12),
           child: Stack(
             fit: StackFit.expand,
             children: [
-              Image.file(_imageFiles[index], fit: BoxFit.cover),
+              Image.memory(_pickedBytes[index], fit: BoxFit.cover),
               // 삭제 버튼
               Positioned(
                 top: 4,
@@ -297,11 +305,11 @@ class _MenuScanScreenState extends ConsumerState<MenuScanScreen> {
     return Column(
       children: [
         // 사진 수 표시
-        if (_imageFiles.isNotEmpty)
+        if (_pickedFiles.isNotEmpty)
           Padding(
             padding: const EdgeInsets.only(bottom: 8),
             child: Text(
-              '${_imageFiles.length}장 선택됨',
+              '${_pickedFiles.length}장 선택됨',
               style: const TextStyle(
                   color: AppColors.textSecondary, fontSize: 13),
             ),
@@ -312,7 +320,7 @@ class _MenuScanScreenState extends ConsumerState<MenuScanScreen> {
               child: OutlinedButton.icon(
                 onPressed: _isAnalyzing ? null : _showImageSourceDialog,
                 icon: const Icon(Icons.add_photo_alternate),
-                label: Text(_imageFiles.isNotEmpty ? '사진 추가' : '사진 선택'),
+                label: Text(_pickedFiles.isNotEmpty ? '사진 추가' : '사진 선택'),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppColors.textPrimary,
                   side: BorderSide(
@@ -323,7 +331,7 @@ class _MenuScanScreenState extends ConsumerState<MenuScanScreen> {
                 ),
               ),
             ),
-            if (_imageFiles.isNotEmpty) ...[
+            if (_pickedFiles.isNotEmpty) ...[
               const SizedBox(width: 12),
               Expanded(
                 child: ElevatedButton.icon(

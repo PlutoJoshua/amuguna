@@ -3,13 +3,13 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../../core/audio/audio_player_service.dart';
 import '../../../../core/audio/audio_recorder_service.dart';
 import '../../../../core/constants/api_config.dart';
 import '../../../../core/network/kanana_client.dart';
+import '../../../../core/services/api_usage_service.dart';
 import '../../data/models/chat_message.dart';
 import '../../data/repositories/chat_repository.dart';
 
@@ -37,12 +37,22 @@ final audioPlayerProvider = Provider<AudioPlayerService>((ref) {
   return player;
 });
 
+final apiUsageProvider = Provider<ApiUsageService>((ref) {
+  return ApiUsageService();
+});
+
+final remainingCallsProvider = StateProvider<int>((ref) => ApiUsageService.dailyLimit);
+
 final chatNotifierProvider =
     StateNotifierProvider<ChatNotifier, ChatState>((ref) {
   return ChatNotifier(
     repository: ref.read(chatRepositoryProvider),
     recorder: ref.read(audioRecorderProvider),
     player: ref.read(audioPlayerProvider),
+    apiUsage: ref.read(apiUsageProvider),
+    onRemainingCallsChanged: (remaining) {
+      ref.read(remainingCallsProvider.notifier).state = remaining;
+    },
   );
 });
 
@@ -64,6 +74,7 @@ class ChatState {
   final double currentAmplitude;
   final int recordingDurationSeconds;
   final List<String> quickReplies;
+  final bool quotaExhausted;
 
   const ChatState({
     this.messages = const [],
@@ -81,6 +92,7 @@ class ChatState {
     this.currentAmplitude = -160.0,
     this.recordingDurationSeconds = 0,
     this.quickReplies = const [],
+    this.quotaExhausted = false,
   });
 
   ChatState copyWith({
@@ -98,6 +110,7 @@ class ChatState {
     double? currentAmplitude,
     int? recordingDurationSeconds,
     List<String>? quickReplies,
+    bool? quotaExhausted,
   }) {
     return ChatState(
       messages: messages ?? this.messages,
@@ -116,6 +129,7 @@ class ChatState {
       recordingDurationSeconds:
           recordingDurationSeconds ?? this.recordingDurationSeconds,
       quickReplies: quickReplies ?? this.quickReplies,
+      quotaExhausted: quotaExhausted ?? this.quotaExhausted,
     );
   }
 
@@ -129,6 +143,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
   final ChatRepository _repository;
   final AudioRecorderService _recorder;
   final AudioPlayerService _player;
+  final ApiUsageService _apiUsage;
+  final void Function(int remaining)? onRemainingCallsChanged;
   static const _uuid = Uuid();
   StreamSubscription<double>? _amplitudeSub;
   Timer? _recordingTimer;
@@ -138,14 +154,41 @@ class ChatNotifier extends StateNotifier<ChatState> {
     required ChatRepository repository,
     required AudioRecorderService recorder,
     required AudioPlayerService player,
+    required ApiUsageService apiUsage,
+    this.onRemainingCallsChanged,
   })  : _repository = repository,
         _recorder = recorder,
         _player = player,
+        _apiUsage = apiUsage,
         super(ChatState(
           sessionId: _uuid.v4(),
           startTime: DateTime.now(),
         )) {
     _addAssistantGreeting();
+    _initRemainingCalls();
+  }
+
+  Future<void> _initRemainingCalls() async {
+    final remaining = await _apiUsage.getRemainingCalls();
+    onRemainingCallsChanged?.call(remaining);
+  }
+
+  /// API 호출 전 쿼터 체크. 소진 시 false 반환 + 에러 메시지 표시
+  Future<bool> _checkQuota() async {
+    if (!await _apiUsage.canMakeCall()) {
+      state = state.copyWith(isStreaming: false, quotaExhausted: true);
+      return false;
+    }
+    return true;
+  }
+
+  /// API 호출 후 카운터 기록
+  Future<void> _recordApiCall() async {
+    final remaining = await _apiUsage.recordCall();
+    onRemainingCallsChanged?.call(remaining);
+    if (remaining <= 0) {
+      state = state.copyWith(quotaExhausted: true);
+    }
   }
 
   @override
@@ -175,9 +218,9 @@ class ChatNotifier extends StateNotifier<ChatState> {
   }
 
   Future<void> _startRecording() async {
-    // 마이크 권한 요청
-    final status = await Permission.microphone.request();
-    if (!status.isGranted) {
+    // 마이크 권한 요청 (record 패키지가 플랫폼별로 처리)
+    final hasPermission = await _recorder.hasPermission();
+    if (!hasPermission) {
       final errorMsg = ChatMessage(
         id: _uuid.v4(),
         role: MessageRole.assistant,
@@ -234,6 +277,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
     final audioBase64 = await _recorder.stopRecording();
     if (audioBase64 == null) return;
 
+    if (!await _checkQuota()) return;
+
     // 사용자 메시지 추가 (음성은 텍스트 미리보기 없이)
     final userMessage = ChatMessage(
       id: _uuid.v4(),
@@ -258,6 +303,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
   /// 텍스트 메시지 전송
   Future<void> sendTextMessage(String text) async {
     if (text.trim().isEmpty || state.isStreaming) return;
+    if (!await _checkQuota()) return;
     // 퀵 리플라이 초기화
     state = state.copyWith(quickReplies: []);
 
@@ -410,6 +456,9 @@ class ChatNotifier extends StateNotifier<ChatState> {
       decision: parsedDecision ?? state.decision,
       quickReplies: parsedQuickReplies,
     );
+
+    // API 호출 카운터 기록
+    await _recordApiCall();
 
     // 오디오 자동 재생
     if (audioData != null) {
