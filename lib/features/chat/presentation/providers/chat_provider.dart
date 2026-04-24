@@ -10,13 +10,53 @@ import '../../../../core/audio/audio_recorder_service.dart';
 import '../../../../core/constants/api_config.dart';
 import '../../../../core/network/kanana_client.dart';
 import '../../../../core/services/api_usage_service.dart';
+import '../../../../core/services/user_preferences_service.dart';
 import '../../data/models/chat_message.dart';
 import '../../data/repositories/chat_repository.dart';
 
 // --- Providers ---
 
+/// UserPreferencesService 싱글턴
+final userPreferencesServiceProvider = Provider<UserPreferencesService>(
+  (ref) => UserPreferencesService(),
+);
+
+/// 앱 부팅 시 `main()`에서 override로 초기값 주입.
+/// Settings 화면에서 키 변경 시 notifier.state를 갱신하면
+/// `kananaClientProvider`가 자동으로 새 클라이언트를 만든다.
+final userApiKeyProvider = StateProvider<String?>((ref) => null);
+
+/// 익명 클라이언트 ID — 서버 쿼터 카운터용.
+/// `main()`에서 override로 주입.
+final clientIdProvider = StateProvider<String?>((ref) => null);
+
 final kananaClientProvider = Provider<KananaClient>((ref) {
-  final client = KananaClient(apiKey: ApiConfig.apiKey);
+  final userKey = ref.watch(userApiKeyProvider);
+  final clientId = ref.watch(clientIdProvider);
+
+  // baseUrl 결정: 프록시 모드 vs 직접 호출
+  final baseUrl = ApiConfig.useProxy
+      ? '${ApiConfig.proxyBaseUrl}/api/kanana-proxy'
+      : ApiConfig.kananaDirectBaseUrl;
+
+  // apiKey 결정:
+  // 1) 사용자가 직접 입력한 키가 있으면 그걸 사용 (프록시가 그대로 forward, 쿼터 X)
+  // 2) 프록시 모드인데 사용자 키 없으면 빈 문자열 (서버가 공용 키 주입, 쿼터 O)
+  // 3) 직접 호출 모드면 dart-define 키 사용
+  final String apiKey;
+  if (userKey != null && userKey.isNotEmpty) {
+    apiKey = userKey;
+  } else if (!ApiConfig.useProxy) {
+    apiKey = ApiConfig.directApiKey;
+  } else {
+    apiKey = '';
+  }
+
+  final client = KananaClient(
+    baseUrl: baseUrl,
+    apiKey: apiKey,
+    clientId: clientId,
+  );
   ref.onDispose(() => client.dispose());
   return client;
 });
@@ -50,6 +90,10 @@ final chatNotifierProvider =
     recorder: ref.read(audioRecorderProvider),
     player: ref.read(audioPlayerProvider),
     apiUsage: ref.read(apiUsageProvider),
+    // 사용자가 자기 키를 넣었다면 클라이언트 측 쿼터를 우회한다.
+    // (서버 측에서도 Authorization 헤더가 있으면 쿼터 카운트하지 않음)
+    bypassLocalQuota: () =>
+        (ref.read(userApiKeyProvider)?.isNotEmpty ?? false),
     onRemainingCallsChanged: (remaining) {
       ref.read(remainingCallsProvider.notifier).state = remaining;
     },
@@ -144,6 +188,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
   final AudioRecorderService _recorder;
   final AudioPlayerService _player;
   final ApiUsageService _apiUsage;
+  final bool Function()? bypassLocalQuota;
   final void Function(int remaining)? onRemainingCallsChanged;
   static const _uuid = Uuid();
   StreamSubscription<double>? _amplitudeSub;
@@ -155,6 +200,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
     required AudioRecorderService recorder,
     required AudioPlayerService player,
     required ApiUsageService apiUsage,
+    this.bypassLocalQuota,
     this.onRemainingCallsChanged,
   })  : _repository = repository,
         _recorder = recorder,
@@ -168,13 +214,18 @@ class ChatNotifier extends StateNotifier<ChatState> {
     _initRemainingCalls();
   }
 
+  bool get _shouldBypassQuota => bypassLocalQuota?.call() ?? false;
+
   Future<void> _initRemainingCalls() async {
+    if (_shouldBypassQuota) return;
     final remaining = await _apiUsage.getRemainingCalls();
     onRemainingCallsChanged?.call(remaining);
   }
 
-  /// API 호출 전 쿼터 체크. 소진 시 false 반환 + 에러 메시지 표시
+  /// API 호출 전 쿼터 체크. 소진 시 false 반환 + 에러 메시지 표시.
+  /// 사용자 키 모드면 무조건 통과.
   Future<bool> _checkQuota() async {
+    if (_shouldBypassQuota) return true;
     if (!await _apiUsage.canMakeCall()) {
       state = state.copyWith(isStreaming: false, quotaExhausted: true);
       return false;
@@ -182,8 +233,9 @@ class ChatNotifier extends StateNotifier<ChatState> {
     return true;
   }
 
-  /// API 호출 후 카운터 기록
+  /// API 호출 후 카운터 기록. 사용자 키 모드면 생략.
   Future<void> _recordApiCall() async {
+    if (_shouldBypassQuota) return;
     final remaining = await _apiUsage.recordCall();
     onRemainingCallsChanged?.call(remaining);
     if (remaining <= 0) {
@@ -247,15 +299,18 @@ class ChatNotifier extends StateNotifier<ChatState> {
         }
       });
 
-      // 녹음 시간 타이머
-      _recordingTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-        if (!_disposed) {
-          state = state.copyWith(
-            recordingDurationSeconds: state.recordingDurationSeconds + 1,
-          );
+      // 녹음 시간 타이머 + Kanana-o 60초 제한에 여유를 두고 50초에 자동 중지
+      _recordingTimer = Timer.periodic(const Duration(seconds: 1), (_) async {
+        if (_disposed) return;
+        final next = state.recordingDurationSeconds + 1;
+        state = state.copyWith(recordingDurationSeconds: next);
+        if (next >= 50 && state.isRecording) {
+          debugPrint('Auto-stop: 50s hard limit reached');
+          await _stopAndSend();
         }
       });
-    } catch (e) {
+    } catch (e, st) {
+      debugPrint('startRecording failed: $e\n$st');
       final errorMsg = ChatMessage(
         id: _uuid.v4(),
         role: MessageRole.assistant,
@@ -388,6 +443,19 @@ class ChatNotifier extends StateNotifier<ChatState> {
       }
     } catch (e) {
       debugPrint('Stream error: $e');
+      // 서버 쿼터 소진(429)이면 퀵 오버레이로 전환
+      if (e is KananaApiException && e.statusCode == 429) {
+        // 빈 placeholder 메시지 제거
+        final trimmed = state.messages
+            .where((m) => m.id != assistantId)
+            .toList();
+        state = state.copyWith(
+          messages: trimmed,
+          isStreaming: false,
+          quotaExhausted: true,
+        );
+        return;
+      }
       String errorMsg;
       if (e is KananaApiException) {
         errorMsg = '서버 연결에 문제가 생겼어요. (${e.statusCode})';

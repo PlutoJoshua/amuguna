@@ -204,6 +204,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 ref.read(chatNotifierProvider.notifier).resetSession();
                 context.go('/');
               },
+              onOpenSettings: () => context.push('/settings'),
             ),
         ],
       ),

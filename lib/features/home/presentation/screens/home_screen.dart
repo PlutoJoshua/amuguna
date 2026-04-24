@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_strings.dart';
+import '../../../chat/presentation/providers/chat_provider.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final hasUserKey =
+        (ref.watch(userApiKeyProvider)?.isNotEmpty ?? false);
     return Scaffold(
       body: SafeArea(
         child: Padding(
@@ -16,6 +20,20 @@ class HomeScreen extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
+              // 상단 툴바 — 설정 아이콘
+              Align(
+                alignment: Alignment.centerRight,
+                child: IconButton(
+                  tooltip: hasUserKey ? '내 키 사용 중' : '설정',
+                  icon: Icon(
+                    hasUserKey ? Icons.vpn_key : Icons.settings_outlined,
+                    color: hasUserKey
+                        ? AppColors.primary
+                        : AppColors.textSecondary,
+                  ),
+                  onPressed: () => context.push('/settings'),
+                ),
+              ),
               const Spacer(flex: 2),
 
               // 로고

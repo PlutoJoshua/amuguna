@@ -37,7 +37,20 @@ class MobileAudioRecorderService implements AudioRecorderService {
 
   @override
   Future<void> startRecording() async {
-    if (_state != RecordingState.idle) return;
+    // 이전 녹음 상태가 남아 있으면 강제로 정리하고 재시작한다.
+    // (이전 세션의 400 에러 등으로 record 패키지가 멎은 경우 대비)
+    if (_state != RecordingState.idle) {
+      _amplitudeSub?.cancel();
+      try {
+        if (await _recorder.isRecording()) {
+          await _recorder.cancel();
+        } else {
+          await _recorder.stop();
+        }
+      } catch (_) {}
+      _state = RecordingState.idle;
+      _stateController.add(_state);
+    }
 
     final dir = await getTemporaryDirectory();
     _currentPath =

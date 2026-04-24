@@ -4,8 +4,13 @@ import '../../../../core/constants/app_colors.dart';
 
 class QuotaExhaustedOverlay extends StatelessWidget {
   final VoidCallback onGoHome;
+  final VoidCallback? onOpenSettings;
 
-  const QuotaExhaustedOverlay({super.key, required this.onGoHome});
+  const QuotaExhaustedOverlay({
+    super.key,
+    required this.onGoHome,
+    this.onOpenSettings,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -77,31 +82,54 @@ class QuotaExhaustedOverlay extends StatelessWidget {
               ),
               const SizedBox(height: 24),
 
-              // 정식 출시 안내
+              // 내 키 입력 CTA
               Text(
-                '정식 오픈하면 무제한으로 골라드릴게요!',
+                '본인 Kanana-o API 키가 있으면\n지금 바로 무제한으로 쓸 수 있어요!',
+                textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: AppColors.textSecondary.withValues(alpha: 0.7),
+                  color: AppColors.textSecondary.withValues(alpha: 0.85),
                   fontSize: 14,
+                  height: 1.5,
                 ),
               ),
-              const Text(
-                '기대해주세요 ✨',
-                style: TextStyle(
-                  color: AppColors.primary,
-                  fontSize: 14,
+              const SizedBox(height: 20),
+
+              if (onOpenSettings != null) ...[
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: onOpenSettings,
+                    icon: const Icon(Icons.vpn_key, size: 18),
+                    label: const Text(
+                      '내 Kanana-o 키 입력하기',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.black,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 32),
+                const SizedBox(height: 12),
+              ],
 
               // 홈으로 돌아가기 버튼
               SizedBox(
                 width: double.infinity,
-                child: ElevatedButton(
+                child: OutlinedButton(
                   onPressed: onGoHome,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.black,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.textPrimary,
+                    side: BorderSide(
+                      color: Colors.white.withValues(alpha: 0.2),
+                    ),
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
@@ -109,10 +137,7 @@ class QuotaExhaustedOverlay extends StatelessWidget {
                   ),
                   child: const Text(
                     '홈으로 돌아가기',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 15),
                   ),
                 ),
               ),

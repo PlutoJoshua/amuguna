@@ -35,7 +35,19 @@ class WebAudioRecorderService implements AudioRecorderService {
 
   @override
   Future<void> startRecording() async {
-    if (_state != RecordingState.idle) return;
+    // 이전 녹음 상태가 남아 있으면 강제로 정리하고 재시작
+    if (_state != RecordingState.idle) {
+      _amplitudeSub?.cancel();
+      await _recordSub?.cancel();
+      try {
+        if (await _recorder.isRecording()) {
+          await _recorder.cancel();
+        }
+      } catch (_) {}
+      _audioChunks.clear();
+      _state = RecordingState.idle;
+      _stateController.add(_state);
+    }
 
     _audioChunks.clear();
 
