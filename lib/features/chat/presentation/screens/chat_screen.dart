@@ -130,6 +130,67 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           SafeArea(
         child: Column(
           children: [
+            // Mode B 메뉴판 칩 (썸네일 + 사진 수)
+            if (chatState.mode == ChatMode.modeB &&
+                chatState.menuThumbnail != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppColors.primary.withValues(alpha: 0.3),
+                      width: 0.5,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.memory(
+                          chatState.menuThumbnail!,
+                          width: 44,
+                          height: 44,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              '메뉴판 사진 ${chatState.menuPhotoCount}장 분석됨',
+                              style: const TextStyle(
+                                color: AppColors.textPrimary,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '이 메뉴 안에서만 추천해드려요',
+                              style: TextStyle(
+                                color:
+                                    AppColors.textSecondary.withValues(alpha: 0.8),
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(
+                        Icons.image_search,
+                        color: AppColors.primary.withValues(alpha: 0.6),
+                        size: 18,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             // 대화 영역
             Expanded(
               child: ListView.builder(

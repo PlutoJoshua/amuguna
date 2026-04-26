@@ -144,6 +144,10 @@ class ChatState {
   final int recordingDurationSeconds;
   final List<String> quickReplies;
   final bool quotaExhausted;
+  /// Mode B에서 분석한 메뉴판 첫 장의 썸네일 바이트(채팅 상단 표시용)
+  final Uint8List? menuThumbnail;
+  /// Mode B에서 사용자가 업로드한 메뉴판 사진 수
+  final int menuPhotoCount;
 
   const ChatState({
     this.messages = const [],
@@ -162,6 +166,8 @@ class ChatState {
     this.recordingDurationSeconds = 0,
     this.quickReplies = const [],
     this.quotaExhausted = false,
+    this.menuThumbnail,
+    this.menuPhotoCount = 0,
   });
 
   ChatState copyWith({
@@ -180,6 +186,8 @@ class ChatState {
     int? recordingDurationSeconds,
     List<String>? quickReplies,
     bool? quotaExhausted,
+    Uint8List? menuThumbnail,
+    int? menuPhotoCount,
   }) {
     return ChatState(
       messages: messages ?? this.messages,
@@ -199,6 +207,8 @@ class ChatState {
           recordingDurationSeconds ?? this.recordingDurationSeconds,
       quickReplies: quickReplies ?? this.quickReplies,
       quotaExhausted: quotaExhausted ?? this.quotaExhausted,
+      menuThumbnail: menuThumbnail ?? this.menuThumbnail,
+      menuPhotoCount: menuPhotoCount ?? this.menuPhotoCount,
     );
   }
 
@@ -981,12 +991,16 @@ class ChatNotifier extends StateNotifier<ChatState> {
     return result;
   }
 
-  /// 모드 B 준비 (인사 메시지 대신 분석 중 표시)
-  void startModeB() {
+  /// 모드 B 준비 (인사 메시지 대신 분석 중 표시).
+  /// 메뉴판 썸네일과 사진 수를 받아 채팅 상단에 표시한다.
+  void startModeB({
+    Uint8List? menuThumbnail,
+    int photoCount = 0,
+  }) {
     final loadingMessage = ChatMessage(
       id: _uuid.v4(),
       role: MessageRole.assistant,
-      text: '메뉴판을 분석하고 있어요... 📸',
+      text: '메뉴판을 확인하고 있어요... 📸',
     );
 
     state = ChatState(
@@ -994,6 +1008,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
       startTime: DateTime.now(),
       mode: ChatMode.modeB,
       messages: [loadingMessage],
+      menuThumbnail: menuThumbnail,
+      menuPhotoCount: photoCount,
     );
   }
 
