@@ -15,29 +15,53 @@
 ### 요구사항
 
 - Flutter 3.29+ / Dart 3.8+
-- Kanana-o API 키
+- 지원 플랫폼: **iOS / Android / macOS / Web**
+- Kanana-o API 키 (개인 베타 키 또는 공용 프록시 경유)
 
-### 실행
+### 로컬 실행 — 직접 호출 모드 (네이티브 앱 전용)
+
+자기 Kanana-o 키를 직접 빌드에 주입. 가장 단순.
 
 ```bash
-# 의존성 설치
 flutter pub get
 
-# 실행 (API 키를 --dart-define으로 전달)
+# macOS 데스크탑 (개발 추천 — 빌드 빠름, 마이크 즉시)
+flutter run -d macos --dart-define=KANANA_API_KEY=your_api_key_here
+
+# iOS / Android 실기기
 flutter run --dart-define=KANANA_API_KEY=your_api_key_here
 
 # 릴리즈 빌드
-flutter build apk --dart-define=KANANA_API_KEY=your_api_key_here
-flutter build ios --dart-define=KANANA_API_KEY=your_api_key_here
+flutter build ios     --dart-define=KANANA_API_KEY=your_api_key_here
+flutter build apk     --dart-define=KANANA_API_KEY=your_api_key_here
+flutter build macos   --dart-define=KANANA_API_KEY=your_api_key_here
 ```
 
-> **참고**: API 키는 `.env` 파일이 아닌 `--dart-define`으로 빌드 시 주입됩니다. 코드에 키를 직접 넣지 마세요.
+> ⚠️ **웹 빌드는 직접 호출 모드 불가** — Kanana-o API가 CORS를 지원하지 않아 브라우저에서 직접 호출 시 차단된다. 웹은 반드시 아래 프록시 경유 모드로 빌드한다.
+
+### 로컬 실행 — 프록시 경유 모드 (웹 빌드 또는 퍼블릭 베타용)
+
+서버 측 프록시(Firebase Functions)에서 키를 주입하므로 빌드 산출물에 키가 노출되지 않는다.
+
+```bash
+flutter build web --release \
+  --dart-define=PROXY_BASE_URL=https://<your-firebase-project>.web.app
+```
+
+프록시 + 호스팅 배포 절차는 [DEPLOY.md](DEPLOY.md) 참고.
+
+### 사용자 본인 키 입력 (앱 내 설정)
+
+빌드에 키를 안 넣었거나 공용 쿼터(하루 20명)를 우회하고 싶을 때, 앱 홈 우상단 **⚙️** 또는 쿼터 소진 화면에서 본인 Kanana-o 키를 입력하면 클라이언트에서 직접 호출 헤더에 실어 보낸다. 키는 `shared_preferences`로 단말에만 저장되고 서버 측 쿼터를 소모하지 않는다.
+
+> **키 보안**: 코드에 절대 직접 박지 말고 `--dart-define` 또는 사용자 입력 경로만 쓴다. `.env`/`firebase functions:secrets:set KANANA_API_KEY`로 서버 비밀에 저장.
 
 ---
 
 ## 📋 목차
 
 - [프로젝트 개요](#프로젝트-개요)
+- [현재 구현 상태](#현재-구현-상태) ← 최신 진행
 - [왜 "아무거나"인가?](#왜-아무거나인가)
 - [핵심 컨셉: 3대 한국 문화 훅포인트](#핵심-컨셉-3대-한국-문화-훅포인트)
 - [Kanana-o 기술 매핑](#kanana-o-기술-매핑)
@@ -67,8 +91,8 @@ flutter build ios --dart-define=KANANA_API_KEY=your_api_key_here
 |------|------|
 | **프로덕트명** | 아무거나 (amuguna) |
 | **컨셉** | 음성 감정 분석 기반 의사결정 도우미 |
-| **핵심 기술** | Kakao Kanana-o 멀티모달 AI |
-| **프로덕트 형태** | 웹 앱 (데모용) |
+| **핵심 기술** | Kakao Kanana-o 멀티모달 AI (음성 + 이미지) |
+| **프로덕트 형태** | Flutter 앱 (iOS · Android · macOS · Web) |
 | **타겟 사용자** | MZ세대(일상 결정 피로), 직장인(업무+회식+소비), 커플/친구 그룹 |
 | **배경** | 카카오 AI 앰배서더 Kanana-o 베타 테스터 선정 |
 
@@ -79,6 +103,40 @@ flutter build ios --dart-define=KANANA_API_KEY=your_api_key_here
 - **룰렛/동전던지기**: 무작위 결과. 사용자 의지 무시
 - **일반 AI 추천**: 텍스트 기반 추천. 맥락 부족
 - **아무거나**: 음성 톤에서 감정을 읽어 **"네가 진짜 원하는 것"**을 찾아줌. Kanana-o만 가능한 한국어 감정 인식 활용
+
+---
+
+## 현재 구현 상태
+
+> 카카오 Kanana-o 베타테스트 기간 동안 실험·개선이 진행 중인 부분과, 이미 동작하는 부분을 분리해 정리.
+
+### ✅ 동작하는 것
+
+| 영역 | 상태 |
+|------|------|
+| Mode A "뭐 먹지?" — 음성 입력 + 자연어 응답 + 음성 응답 | ✅ |
+| Mode B "뭐 시키지?" — 메뉴판 사진(여러 장) + Vision 분석 + 음성 추천 | ✅ |
+| 멀티턴 대화 (이전 발화 기억 + 거부 메뉴 회피) | ✅ |
+| 결정 유형 카드 4종 (INTUIT / ANALYST / VIBE / ZEN) + confetti 연출 | ✅ |
+| 받아쓰기 폴백 — 메인 호출이 USER_HEARD 빠뜨려도 단일 목적 호출로 보강 | ✅ |
+| 룰베이스 메타 추출기 — EMOTION/INTENT/DECISION을 본문 키워드로 보완 | ✅ |
+| 디버그 로그 화면 — 세션별 폴더 + 턴별 입력/메타/raw 응답 ([/debug-log](lib/features/debug_log/presentation/screens/debug_log_screen.dart)) | ✅ |
+| 하이브리드 키 모드 — 빌드 키 / 사용자 키 입력 / 프록시 공용 키 (3-way) | ✅ |
+| Firebase Functions 프록시 + Firestore 쿼터 (하루 N명 선착순) | ✅ |
+| macOS 데스크탑 빌드 — 마이크/네트워크 entitlements 설정 완료 | ✅ |
+| Mode B UX — 분석 중 spinner / 결과 확인 단계 / 채팅 상단 메뉴판 칩 | ✅ |
+
+### ⚠️ 알려진 제약
+
+- **Kanana-o 음성 모달리티에서 시스템 프롬프트 후반부를 자주 무시** — `[USER_HEARD]` `[INTENT]` `[EMOTION]` 같은 메타 태그가 매 응답마다 일관되게 나오지 않음. 이걸 보완하려고 받아쓰기 폴백 + 룰베이스 추출을 도입.
+- **Kanana-o API CORS 미지원** — 웹 빌드는 반드시 프록시 경유.
+- **녹음 sample rate** — record 패키지가 macOS에서 16kHz 강제를 일부 무시할 수 있어 WAV 파일 길이가 실제보다 길게 표기될 수 있음. 인식 자체는 동작.
+- **음성은 60초 이내 권장** — Kanana-o 서버가 60s 초과 음성 거부. 클라이언트에서 50초 하드 리밋.
+
+### ❌ 미구현 (Phase 2 이후)
+
+- 눈치 모드(그룹 의사결정) — README의 컨셉 섹션 참고
+- 결정 유형 카드 SNS 공유 OG 이미지
 
 ---
 
@@ -547,17 +605,20 @@ TTS (Voicebox + Univnet) ← "사람의 입" — 자연스러운 음성 생성
 └─────────────────────────────────────────────┘
 ```
 
-### 기술 스택 (MVP)
+### 기술 스택 (실제 구현)
 
 | 영역 | 기술 | 선택 이유 |
 |------|------|-----------|
-| **프론트엔드** | Next.js / React | SSR 지원, 빠른 프로토타이핑 |
-| **스타일링** | Tailwind CSS | 유틸리티 기반 빠른 UI 구축 |
-| **음성 처리** | Web Audio API + MediaRecorder | 브라우저 네이티브 오디오 캡처 |
-| **백엔드** | Next.js API Routes 또는 FastAPI | WebSocket + REST 하이브리드 |
-| **AI 통신** | OpenAI SDK (Python/JS) | Kanana-o API가 OpenAI SDK 호환 |
-| **상태 관리** | Zustand 또는 Jotai | 경량, 세션 기반 상태 |
-| **배포** | Vercel 또는 Cloudflare Pages | 빠른 배포, 무료 티어 |
+| **앱 프레임워크** | Flutter 3.29+ / Dart 3.8+ | 단일 코드베이스로 iOS·Android·macOS·Web 동시 지원 |
+| **상태 관리** | flutter_riverpod 2.x | StateNotifier 기반, override로 비동기 초기값 주입 |
+| **라우팅** | go_router 14.x | 선언적 라우트, 딥링크 친화 |
+| **음성 캡처** | record 5.x (mobile/web 분기) | 16kHz mono WAV. macOS는 `AudioEncoder.wav`로 헤더 직접 작성 |
+| **음성 재생** | just_audio 0.9.x (StreamAudioSource) | Kanana-o가 보내는 24kHz 청크를 인메모리 스트림으로 재생 |
+| **AI 통신** | http.Client + 자체 SSE 파서 ([kanana_client.dart](lib/core/network/kanana_client.dart)) | OpenAI SDK 호환. base_url/apiKey/clientId 런타임 주입 |
+| **저장소** | shared_preferences | 사용자 키, 익명 클라이언트 ID, 일일 호출 카운터 |
+| **백엔드 프록시** | Firebase Functions v2 (TypeScript) | CORS 처리 + Firestore 쿼터 트랜잭션 + SSE pass-through |
+| **호스팅** | Firebase Hosting + Firestore | 정적 + Functions rewrite + 보안 규칙 |
+| **배포 가이드** | [DEPLOY.md](DEPLOY.md) | Secret 주입, Hosting/Functions deploy, 스모크 테스트 절차 |
 
 ---
 
@@ -964,34 +1025,38 @@ class AudioProcessor {
 
 > **목표**: 카카오 앰배서더 제출용 데모. 모드 A를 메인으로, 모드 B를 추가 임팩트로 보여준다.
 
-**모드 A: "뭐 먹지?" (핵심 — 반드시 구현)**:
-- [ ] 음성 녹음 + 16kHz WAV 변환 파이프라인
-- [ ] Kanana-o 음성 API 호출 (감정 분석 + STT)
-- [ ] 대화형 맥락 질문 (혼밥/회식, 선호 방향, 시간 등)
-- [ ] 감정 분석 결과 시각화 (감정 게이지)
-- [ ] AI 음성 응답 재생 (감정 미러링 톤)
-- [ ] 멀티턴 대화 (최소 3턴)
-- [ ] 결정 완료 화면 + 결정 유형 미니 카드
+**모드 A: "뭐 먹지?" (핵심)**:
+- [x] 음성 녹음 + WAV 파이프라인 (mobile/web 분기, 50초 하드 리밋)
+- [x] Kanana-o 음성 API 호출 (스트리밍 + TTS 응답)
+- [x] 대화형 맥락 질문 + 멀티턴 (apiHistory에 transcript 누적)
+- [x] 감정 게이지 (룰베이스 + 모델 메타 협력)
+- [x] AI 음성 응답 자동 재생
+- [x] 결정 완료 화면 + 결정 유형 카드 (4종, confetti)
+- [x] 거부 메뉴 회피 (시스템 프롬프트 + history 컨텍스트)
 
-**모드 B: "뭐 시키지?" (추가 임팩트)**:
-- [ ] 메뉴판 사진 업로드 / 카메라 촬영
-- [ ] Kanana-o Vision API 연동 (메뉴 항목 추출)
-- [ ] 모드 A → 모드 B 맥락 이어받기
-- [ ] 메뉴판 기반 음성 대화 + 추천
+**모드 B: "뭐 시키지?" (Vision)**:
+- [x] 메뉴판 사진 업로드 (여러 장) / 카메라 (mobile only)
+- [x] Kanana-o Vision API — 카테고리별 메뉴 분류
+- [x] 분석 중 spinner / 결과 확인 단계 / 다시 찍기 분기
+- [x] 메뉴판 기반 음성 대화 (메뉴 컨텍스트 history 주입)
+- [x] 채팅 상단 메뉴판 썸네일 칩
 
-**공통**:
-- [ ] 결정 유형 카드 디자인 4종
-- [ ] 카카오톡 공유 기능
-- [ ] 반응형 모바일 UI
+**공통/인프라**:
+- [x] 결정 유형 카드 디자인 4종
+- [x] 하이브리드 키 모드 (빌드 키 / 사용자 입력 / 프록시 공용)
+- [x] 디버그 로그 화면 (세션 폴더 + 턴별 raw/메타)
+- [x] Firebase Functions 프록시 + Firestore 쿼터
+- [x] 반응형 모바일 UI (다크 테마)
+- [ ] 카카오톡 공유 (결정 유형 카드 OG 이미지)
 
-### Phase 2: 그룹 기능 (Phase 1 이후)
+### Phase 2: 그룹 기능 (미착수)
 
 - [ ] 눈치 모드 (그룹 링크 생성)
 - [ ] 다수 음성 입력 수집 + 선호 교집합 분석
 - [ ] 그룹 결정 히스토리
 - [ ] 결정 유형 궁합
 
-### Phase 3: 바이럴 최적화 (Phase 2 이후)
+### Phase 3: 바이럴 최적화 (미착수)
 
 - [ ] 결정 유형 카드 SNS 최적화 (OG 이미지)
 - [ ] 인스타그램 스토리 사이즈 카드
@@ -1052,6 +1117,13 @@ MIT License
 ## 기여
 
 이 프로젝트는 카카오 AI 앰배서더 Kanana-o 베타 테스트 프로그램의 일환으로 제작되었습니다.
+
+### 관련 문서
+
+- [DEPLOY.md](DEPLOY.md) — Firebase Hosting + Functions + Firestore 배포 절차
+- [lib/features/debug_log/](lib/features/debug_log/) — 매 턴의 입력/응답/메타 추적용 로그 화면
+- [lib/features/chat/data/services/meta_extractor.dart](lib/features/chat/data/services/meta_extractor.dart) — 모델 메타 누락 시 룰베이스 추출
+- [functions/src/index.ts](functions/src/index.ts) — 사용자 키 forward + 공용 키 쿼터 트랜잭션
 
 ---
 
