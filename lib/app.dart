@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'core/theme/app_theme.dart';
 import 'features/chat/presentation/providers/chat_provider.dart';
 import 'features/chat/presentation/screens/chat_screen.dart';
+import 'features/debug_log/presentation/screens/debug_log_screen.dart';
 import 'features/decision/presentation/screens/decision_screen.dart';
 import 'features/home/presentation/screens/home_screen.dart';
 import 'features/menu_scan/presentation/screens/menu_scan_screen.dart';
@@ -40,6 +41,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/settings',
         builder: (context, state) => const SettingsScreen(),
+      ),
+      GoRoute(
+        path: '/debug-log',
+        builder: (context, state) => const DebugLogScreen(),
       ),
     ],
   );

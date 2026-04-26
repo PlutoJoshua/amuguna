@@ -53,6 +53,9 @@ class MessageBubble extends StatelessWidget {
   Widget _buildContent() {
     if (message.isError) return _buildErrorContent();
 
+    final hasTranscript =
+        isUser && message.transcript != null && message.transcript!.isNotEmpty;
+
     return Column(
       crossAxisAlignment:
           isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
@@ -71,14 +74,42 @@ class MessageBubble extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                message.text.isEmpty ? '...' : message.text,
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 15,
-                  height: 1.4,
+              if (hasTranscript) ...[
+                // 음성 메시지 + 받아쓰기 결과
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('🎙️', style: TextStyle(fontSize: 14)),
+                    const SizedBox(width: 6),
+                    Text(
+                      'AI가 받아 적은 말',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.55),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
+                const SizedBox(height: 4),
+                Text(
+                  '"${message.transcript!}"',
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 15,
+                    height: 1.4,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ] else
+                Text(
+                  message.text.isEmpty ? '...' : message.text,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 15,
+                    height: 1.4,
+                  ),
+                ),
               if (message.audioBase64 != null) ...[
                 const SizedBox(height: 8),
                 GestureDetector(

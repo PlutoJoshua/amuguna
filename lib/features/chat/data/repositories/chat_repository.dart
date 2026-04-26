@@ -10,7 +10,11 @@ class ChatRepository {
 
   ChatRepository({required KananaClient client}) : _client = client;
 
-  /// 음성 메시지로 대화 (스트리밍)
+  /// 음성 메시지로 대화 (스트리밍).
+  ///
+  /// 음성 모달리티에서는 시스템 프롬프트의 페르소나/태그 출력 지시가 약하게 적용되는
+  /// 경향이 있어, 매 호출마다 짧은 텍스트 reminder를 audio와 함께 같은 user 메시지로
+  /// 묶어 보낸다.
   Stream<KananaStreamChunk> sendVoiceMessage({
     required String audioBase64,
     required List<Map<String, dynamic>> history,
@@ -24,6 +28,10 @@ class ChatRepository {
           'type': 'input_audio',
           'input_audio': {'data': audioBase64, 'format': 'wav'},
         },
+        {
+          'type': 'text',
+          'text': _voiceReminder,
+        },
       ],
     );
 
@@ -32,6 +40,9 @@ class ChatRepository {
       includeAudio: true,
     );
   }
+
+  static const _voiceReminder = '''(시스템 리마인더 — 음성으로 읽지 마)
+응답: 2-3문장, 친한 카톡 톤, 메뉴 최대 2개. 카테고리 나열 금지, 질문은 한 번에 하나만.''';
 
   /// 텍스트 메시지로 대화 (스트리밍, 텍스트만 응답)
   Stream<KananaStreamChunk> sendTextMessage({
@@ -51,6 +62,33 @@ class ChatRepository {
       messages: messages,
       includeAudio: false,
     );
+  }
+
+  /// 메인 호출이 USER_HEARD를 빠뜨렸을 때만 호출되는 받아쓰기 전용 폴백.
+  /// 단일 목적이라 모델이 다른 작업과 섞이지 않아 신뢰도가 높다.
+  /// 다른 메타(INTENT/EMOTION/DECISION)는 룰베이스로 클라이언트에서 추출한다.
+  Future<String> transcribeVoice(String audioBase64) {
+    final messages = [
+      {
+        'role': 'system',
+        'content':
+            '한국어 음성을 듣고 그대로 받아 적어. 다른 말 금지. 출력은 받아 적은 한국어 문장 한 줄만.',
+      },
+      {
+        'role': 'user',
+        'content': [
+          {
+            'type': 'input_audio',
+            'input_audio': {'data': audioBase64, 'format': 'wav'},
+          },
+          {
+            'type': 'text',
+            'text': '받아 적은 한국어 문장만 한 줄로:',
+          },
+        ],
+      },
+    ];
+    return _client.chatCompletion(messages: messages);
   }
 
   /// 메뉴판 이미지 분석 (비스트리밍, 여러 장 지원)

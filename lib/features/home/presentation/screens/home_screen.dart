@@ -20,18 +20,31 @@ class HomeScreen extends ConsumerWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // 상단 툴바 — 설정 아이콘
+              // 상단 툴바 — 로그 / 설정
               Align(
                 alignment: Alignment.centerRight,
-                child: IconButton(
-                  tooltip: hasUserKey ? '내 키 사용 중' : '설정',
-                  icon: Icon(
-                    hasUserKey ? Icons.vpn_key : Icons.settings_outlined,
-                    color: hasUserKey
-                        ? AppColors.primary
-                        : AppColors.textSecondary,
-                  ),
-                  onPressed: () => context.push('/settings'),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    IconButton(
+                      tooltip: '로그',
+                      icon: const Icon(
+                        Icons.folder_outlined,
+                        color: AppColors.textSecondary,
+                      ),
+                      onPressed: () => context.push('/debug-log'),
+                    ),
+                    IconButton(
+                      tooltip: hasUserKey ? '내 키 사용 중' : '설정',
+                      icon: Icon(
+                        hasUserKey ? Icons.vpn_key : Icons.settings_outlined,
+                        color: hasUserKey
+                            ? AppColors.primary
+                            : AppColors.textSecondary,
+                      ),
+                      onPressed: () => context.push('/settings'),
+                    ),
+                  ],
                 ),
               ),
               const Spacer(flex: 2),

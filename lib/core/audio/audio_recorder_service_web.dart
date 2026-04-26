@@ -128,22 +128,32 @@ class WebAudioRecorderService implements AudioRecorderService {
     const silenceThresholdDb = -40.0;
     const silenceDurationFrames = 8;
 
-    _amplitudeSub =
-        _recorder.onAmplitudeChanged(const Duration(milliseconds: 250)).listen(
-      (amp) {
-        final db = amp.current;
-        _amplitudeController.add(db);
+    // single-subscription stream 재구독 실패해도 녹음은 계속.
+    // 50초 하드 리밋(chat_provider)이 안전망.
+    try {
+      _amplitudeSub = _recorder
+          .onAmplitudeChanged(const Duration(milliseconds: 250))
+          .listen(
+        (amp) {
+          final db = amp.current;
+          _amplitudeController.add(db);
 
-        if (db < silenceThresholdDb) {
-          silentFrames++;
-          if (silentFrames >= silenceDurationFrames) {
-            stopRecording();
+          if (db < silenceThresholdDb) {
+            silentFrames++;
+            if (silentFrames >= silenceDurationFrames) {
+              stopRecording();
+            }
+          } else {
+            silentFrames = 0;
           }
-        } else {
-          silentFrames = 0;
-        }
-      },
-    );
+        },
+        onError: (Object e) {
+          // 무음 감지만 끄고 녹음은 계속
+        },
+      );
+    } catch (e) {
+      // 이미 listen된 stream이면 무음 감지 건너뛰고 녹음 계속
+    }
   }
 
   /// PCM 16-bit 데이터를 WAV로 변환 (WavEncoder와 동일한 로직, dart:io 의존 없음)
