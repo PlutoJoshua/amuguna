@@ -637,7 +637,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
       }
     }
     // 3) DECISION: 사용자 확정 키워드 + 메뉴 사전
-    if (parsedDecision == null) {
+    // 최소 2턴 이상 진행돼야 룰베이스 결정 판정 (첫 턴에 오탐 방지)
+    if (parsedDecision == null && state.turnCount >= 2) {
       final src = parsedUserHeard ?? _lastInputText ?? '';
       final ruled = MetaExtractor.extractDecision(
         userText: src,
@@ -747,16 +748,19 @@ class ChatNotifier extends StateNotifier<ChatState> {
 
       // 받아쓰기 결과로 INTENT/DECISION 룰베이스 재시도
       final ruledIntent = MetaExtractor.extractIntent(transcript);
-      final lastAiBody = state.messages.reversed
-          .firstWhere(
-            (m) => m.role == MessageRole.assistant && m.text.isNotEmpty,
-            orElse: () => state.messages.first,
-          )
-          .text;
-      final ruledDecision = MetaExtractor.extractDecision(
-        userText: transcript,
-        latestAiBody: lastAiBody,
-      );
+      String? ruledDecision;
+      if (state.turnCount >= 2) {
+        final lastAiBody = state.messages.reversed
+            .firstWhere(
+              (m) => m.role == MessageRole.assistant && m.text.isNotEmpty,
+              orElse: () => state.messages.first,
+            )
+            .text;
+        ruledDecision = MetaExtractor.extractDecision(
+          userText: transcript,
+          latestAiBody: lastAiBody,
+        );
+      }
 
       updateDebugLogMeta?.call(
         sessionId: sessionId,

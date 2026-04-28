@@ -15,6 +15,7 @@
 ## 📋 목차
 
 - [프로젝트 개요](#프로젝트-개요)
+- [스크린샷](#-스크린샷) ← 앱 미리보기
 - [빠른 시작](#-빠른-시작)
 - [현재 구현 상태](#현재-구현-상태) ← 최신 진행
 - [왜 "아무거나"인가?](#왜-아무거나인가)
@@ -58,6 +59,68 @@
 - **룰렛/동전던지기**: 무작위 결과. 사용자 의지 무시
 - **일반 AI 추천**: 텍스트 기반 추천. 맥락 부족
 - **아무거나**: 음성 톤에서 감정을 읽어 **"네가 진짜 원하는 것"**을 찾아줌. Kanana-o만 가능한 한국어 감정 인식 활용
+
+---
+
+## 📸 스크린샷
+
+**홈 / 설정**
+
+<table>
+  <tr>
+    <td align="center"><b>홈 (다크)</b></td>
+    <td align="center"><b>홈 (라이트)</b></td>
+    <td align="center"><b>설정 (BYO-key)</b></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/home-dark.png" width="220"/></td>
+    <td><img src="docs/screenshots/home-light.png" width="220"/></td>
+    <td><img src="docs/screenshots/settings-light.png" width="220"/></td>
+  </tr>
+</table>
+
+**뭐 먹지? — 음성 대화 (Mode A)**
+
+<table>
+  <tr>
+    <td align="center"><b>음성 녹음 중</b></td>
+    <td align="center"><b>AI 감정 미러링 대화</b></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/chat-recording-light.png" width="220"/></td>
+    <td><img src="docs/screenshots/chat-voice-light.png" width="220"/></td>
+  </tr>
+</table>
+
+**뭐 시키지? — 메뉴판 분석 (Mode B)**
+
+<table>
+  <tr>
+    <td align="center"><b>메뉴판 업로드</b></td>
+    <td align="center"><b>Vision 분석 결과</b></td>
+    <td align="center"><b>메뉴 기반 추천 대화</b></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/menu-result-light.png" width="220"/></td>
+    <td><img src="docs/screenshots/menu-result-light2.png" width="220"/></td>
+    <td><img src="docs/screenshots/chat-mirror-light.png" width="220"/></td>
+  </tr>
+</table>
+
+**결정 완료 / 결정 유형 카드**
+
+<table>
+  <tr>
+    <td align="center"><b>결정 완료 🎉</b></td>
+    <td align="center"><b>직감형 (INTUIT)</b></td>
+    <td align="center"><b>초월형 (ZEN)</b></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/decision-card-light.png" width="220"/></td>
+    <td><img src="docs/screenshots/decision-card-light2.png" width="220"/></td>
+    <td><img src="docs/screenshots/decision-card-light3.png" width="220"/></td>
+  </tr>
+</table>
 
 ---
 

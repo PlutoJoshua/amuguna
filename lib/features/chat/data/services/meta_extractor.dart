@@ -99,10 +99,15 @@ class MetaExtractor {
     final user = userText.trim();
 
     // 확정 신호가 user 발화에 있는지
+    // "그래" 같은 모호한 표현 제거 — "그래서", "그래도" 등에 오탐.
+    // "좋아" 뒤에 "좋아?" (질문) 또는 부정("안 좋아") 패턴 제외.
     final confirm = RegExp(
-      r'(좋아|좋다|좋네|콜|오케이|그걸로|할게|가자|먹자|찬성|그래)',
+      r'(좋아[!.]?$|좋다[!.]?$|좋네|콜|오케이|그걸로|할게|가자|먹자|찬성|이걸로|결정)',
     );
     if (!confirm.hasMatch(user)) return null;
+
+    // 부정/질문 문맥이면 결정 아님
+    if (RegExp(r'(안 좋|별로|좋아\?|좋아요\?|싫)').hasMatch(user)) return null;
 
     // 한국 음식 사전 — 자주 등장하는 것들. 확장 가능.
     const menuDict = [

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/theme/theme_context_ext.dart';
 import '../../../chat/presentation/providers/chat_provider.dart';
@@ -202,7 +203,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 controller: _controller,
                 obscureText: _obscure,
                 decoration: InputDecoration(
-                  hintText: 'kanana-... 로 시작하는 API 키',
+                  hintText: 'KC_ 로 시작하는 API 키',
                   filled: true,
                   fillColor: context.colors.surface,
                   border: OutlineInputBorder(
@@ -314,12 +315,28 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      '카카오 Kanana 앰배서더/베타 프로그램에 참여하면 발급됩니다. '
-                      '공식 문서는 HuggingFace의 Kanana-1.5-o-9.8B-instruct-2602-API_Doc 참고.',
+                      '카카오 Kanana-o 베타 테스터로 신청하면 API 키를 발급받을 수 있습니다.',
                       style: TextStyle(
                         fontSize: 12,
                         color: context.colors.textSecondary.withValues(alpha: 0.8),
                         height: 1.5,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    GestureDetector(
+                      onTap: () => launchUrl(
+                        Uri.parse('https://omni.kanana.ai/'),
+                        mode: LaunchMode.externalApplication,
+                      ),
+                      child: Text(
+                        '베타 테스터 신청하기 →',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: context.colors.primary,
+                          decoration: TextDecoration.underline,
+                          decorationColor: context.colors.primary,
+                        ),
                       ),
                     ),
                   ],
