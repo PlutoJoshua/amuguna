@@ -107,26 +107,36 @@ class TypeCard extends StatelessWidget {
             color: fgFainter,
           ),
           const SizedBox(height: 16),
-          // 결정 내용
+          // 결정 내용 — 메뉴명이 길어도 잘리지 않도록 2줄 레이아웃
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '오늘의 결정: $decision',
+                '오늘의 결정',
                 style: TextStyle(
-                  color: fg,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
+                  color: fgSubtle,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
               Text(
                 '$elapsedSeconds초',
                 style: TextStyle(
                   color: fgSubtle,
-                  fontSize: 14,
+                  fontSize: 12,
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            decision,
+            style: TextStyle(
+              color: fg,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              height: 1.3,
+            ),
           ),
           const SizedBox(height: 12),
           // 워터마크

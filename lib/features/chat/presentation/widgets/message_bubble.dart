@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/theme_context_ext.dart';
+import '../../../../core/widgets/markdown_text.dart';
 import '../../data/models/chat_message.dart';
 import 'emotion_gauge.dart';
 
@@ -108,9 +109,18 @@ class MessageBubble extends StatelessWidget {
                     fontStyle: FontStyle.italic,
                   ),
                 ),
-              ] else
+              ] else if (message.text.isEmpty)
                 Text(
-                  message.text.isEmpty ? '...' : message.text,
+                  '...',
+                  style: TextStyle(
+                    color: onBubble,
+                    fontSize: 15,
+                    height: 1.4,
+                  ),
+                )
+              else
+                MarkdownText(
+                  message.text,
                   style: TextStyle(
                     color: onBubble,
                     fontSize: 15,
