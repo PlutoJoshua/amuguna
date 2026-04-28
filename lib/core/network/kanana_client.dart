@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import '../constants/api_config.dart';
@@ -112,8 +113,7 @@ class KananaClient {
           if (chunk != null) yield chunk;
         } catch (e) {
           // 파싱 실패한 청크 로깅 후 계속 진행
-          // ignore: avoid_print
-          print('SSE chunk parse failed: $e');
+          debugPrint('SSE chunk parse failed: $e');
         }
       }
     }

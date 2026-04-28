@@ -48,7 +48,7 @@
 | **프로덕트명** | 아무거나 (amuguna) |
 | **컨셉** | 음성 감정 분석 기반 의사결정 도우미 |
 | **핵심 기술** | Kakao Kanana-o 멀티모달 AI (음성 + 이미지) |
-| **프로덕트 형태** | Flutter 앱 (iOS · Android · macOS · Web) |
+| **프로덕트 형태** | Flutter 앱 (iOS · Android · macOS) |
 | **타겟 사용자** | MZ세대(일상 결정 피로), 직장인(업무+회식+소비), 커플/친구 그룹 |
 | **배경** | 카카오 AI 앰배서더 Kanana-o 베타 테스터 선정 |
 
@@ -473,7 +473,7 @@ TTS (Voicebox + Univnet) ← "사람의 입" — 자연스러운 음성 생성
 
 ```
 [사용자 행동] 마이크 버튼 탭 → "아 점심 뭐 먹지... 아무거나" 발화
-[백엔드 처리] 브라우저 오디오 → WAV 변환 → 16kHz 리샘플링 → Base64
+[앱 처리] record 패키지 → 16kHz mono WAV → Base64
 [AI 처리]
   - STT: "아 점심 뭐 먹지 아무거나" 텍스트 변환
   - 감정 분석: 피곤함 72%, 기대감 45%, 망설임 감지
@@ -625,35 +625,24 @@ TTS (Voicebox + Univnet) ← "사람의 입" — 자연스러운 음성 생성
 
 ```
 ┌─────────────────────────────────────────────┐
-│                 클라이언트 (Web App)            │
+│            클라이언트 (Flutter App)             │
 │  ┌──────────┐ ┌──────────┐ ┌──────────────┐  │
 │  │ 음성 녹음  │ │ 카메라/   │ │ 채팅 UI      │  │
-│  │ (MediaAPI)│ │ 이미지    │ │ (대화 표시)   │  │
+│  │ (record)  │ │ 이미지    │ │ (대화 표시)   │  │
 │  └────┬─────┘ └────┬─────┘ └──────┬───────┘  │
 │       └────────────┼──────────────┘           │
+│  ┌──────────────────────────────────────┐    │
+│  │ 오디오 전처리 (온디바이스)              │    │
+│  │ - 16kHz mono WAV 녹음                 │    │
+│  │ - Base64 인코딩                        │    │
+│  └──────────────────────────────────────┘    │
+│  ┌──────────────────────────────────────┐    │
+│  │ 세션/히스토리 관리 (인메모리)            │    │
+│  │ - 멀티턴 대화 히스토리                   │    │
+│  │ - 결정 패턴 기록 + 유형 분석            │    │
+│  └──────────────────────────────────────┘    │
 │                    ↓                          │
-│          WebSocket 연결                        │
-└────────────────────┼──────────────────────────┘
-                     ↓
-┌─────────────────────────────────────────────┐
-│              백엔드 서버                       │
-│  ┌──────────────────────────────────────┐   │
-│  │ 오디오 전처리                          │   │
-│  │ - PCM → WAV 변환                      │   │
-│  │ - 44.1kHz → 16kHz 리샘플링             │   │
-│  │ - Base64 인코딩                        │   │
-│  └──────────────────────────────────────┘   │
-│  ┌──────────────────────────────────────┐   │
-│  │ 이미지 전처리                          │   │
-│  │ - Base64 인코딩                        │   │
-│  │ - Data URL 포맷 변환                   │   │
-│  └──────────────────────────────────────┘   │
-│  ┌──────────────────────────────────────┐   │
-│  │ 세션/히스토리 관리                      │   │
-│  │ - 멀티턴 대화 히스토리                   │   │
-│  │ - 결정 패턴 기록                        │   │
-│  │ - 결정 유형 분석                        │   │
-│  └──────────────────────────────────────┘   │
+│          HTTP/SSE 스트리밍 (직접 호출)          │
 └────────────────────┼──────────────────────────┘
                      ↓
 ┌─────────────────────────────────────────────┐
@@ -858,73 +847,15 @@ def chat_with_context(session_id, new_message, image_b64=None, audio_b64=None):
     return response
 ```
 
-### 5. 음성 파이프라인 (프론트엔드)
+### 주요 연동 팁
 
-```javascript
-// 브라우저 오디오 캡처 → WAV 16kHz 변환
-class AudioProcessor {
-    constructor() {
-        this.mediaRecorder = null;
-        this.audioChunks = [];
-    }
-    
-    async startRecording() {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        this.mediaRecorder = new MediaRecorder(stream);
-        this.audioChunks = [];
-        
-        this.mediaRecorder.ondataavailable = (e) => {
-            this.audioChunks.push(e.data);
-        };
-        
-        this.mediaRecorder.start();
-    }
-    
-    async stopRecording() {
-        return new Promise((resolve) => {
-            this.mediaRecorder.onstop = async () => {
-                const audioBlob = new Blob(this.audioChunks, { type: 'audio/webm' });
-                const wavBlob = await this.convertToWav16k(audioBlob);
-                const base64 = await this.blobToBase64(wavBlob);
-                resolve(base64);
-            };
-            this.mediaRecorder.stop();
-        });
-    }
-    
-    async convertToWav16k(blob) {
-        const audioContext = new AudioContext({ sampleRate: 16000 });
-        const arrayBuffer = await blob.arrayBuffer();
-        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-        
-        // 16kHz로 리샘플링
-        const offlineCtx = new OfflineAudioContext(
-            1, // mono
-            audioBuffer.duration * 16000,
-            16000
-        );
-        const source = offlineCtx.createBufferSource();
-        source.buffer = audioBuffer;
-        source.connect(offlineCtx.destination);
-        source.start();
-        
-        const resampled = await offlineCtx.startRendering();
-        return this.audioBufferToWav(resampled);
-    }
-    
-    // ... WAV 인코딩 유틸리티
-}
-```
-
-### 주요 연동 팁 (커나나 프로젝트 검증)
-
-1. **WebSocket 스트리밍**: 청크 단위 실시간 전달 시 WebSocket 메시지 버퍼 크기 증설 필수
+1. **SSE 스트리밍**: HTTP SSE로 청크 단위 실시간 전달. 실제 구현은 [`kanana_client.dart`](lib/core/network/kanana_client.dart) 참고
 2. **멀티모달 이미지 처리**: 이미지는 Base64 인코딩 후 Data URL 포맷으로 전달
-3. **음성 파이프라인**: 브라우저 오디오(44.1kHz/48kHz) → WAV 변환 → 16kHz 리샘플링 필수
-4. **음성 출력**: Kanana-o 응답 오디오는 24kHz 샘플레이트
+3. **음성 파이프라인**: record 패키지로 16kHz mono WAV 직접 녹음 → Base64 인코딩
+4. **음성 출력**: Kanana-o 응답 오디오는 24kHz 샘플레이트. just_audio StreamAudioSource로 인메모리 재생
 5. **출력 형식 강제**: FORMAT 태그 + Few-shot 예시로 준수율 향상
 6. **쿼터 관리**: 텍스트 모드로 로직 먼저 검증 → 음성은 나중에 테스트
-7. **아이들 타임아웃**: 음성 입력 시 일정 시간 침묵 시 자동 녹음 종료 처리 필요
+7. **녹음 제한**: Kanana-o 서버 60초 제한. 클라이언트에서 50초 하드 리밋으로 자동 중지
 
 ---
 

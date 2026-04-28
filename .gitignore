@@ -18,6 +18,7 @@ build/
 **/android/**/GeneratedPluginRegistrant.java
 **/android/key.properties
 *.jks
+*.keystore
 
 # iOS
 **/ios/**/*.mode1v3
@@ -47,6 +48,10 @@ build/
 **/ios/Flutter/flutter_export_environment.sh
 **/ios/ServiceDefinitions.json
 **/ios/Runner/GeneratedPluginRegistrant.*
+
+# Firebase / Google Services
+**/google-services.json
+**/GoogleService-Info.plist
 
 # Environment
 .env
