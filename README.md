@@ -3,6 +3,8 @@
 > **"아무거나라고 했지만, 진짜 원하는 건 따로 있잖아"**
 >
 > Kanana-o 멀티모달 AI로 목소리에서 숨은 선호를 읽어주는 의사결정 도우미
+>
+> *Voice emotion AI that reads what you really want — even when you say "anything is fine"*
 
 [![Built with Kanana-o](https://img.shields.io/badge/Built%20with-Kanana--o-FFD43B?style=flat-square)]()
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](LICENSE)
