@@ -1,9 +1,0 @@
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    // 쿼터 컬렉션은 서버(Admin SDK)만 접근. 클라이언트 접근 전면 차단.
-    match /quota/{document=**} {
-      allow read, write: if false;
-    }
-  }
-}

@@ -1,15 +1,10 @@
+import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:uuid/uuid.dart';
 
-/// 사용자가 직접 입력한 Kanana-o API 키와 익명 클라이언트 식별자를 관리한다.
-///
-/// - 사용자 키가 있으면 프록시를 경유하되 서버가 주입하는 공용 키 대신 이 키를 쓴다.
-///   이 경로는 서버 쿼터를 소모하지 않는다.
-/// - 클라이언트 ID는 서버 쿼터 카운터가 "같은 사람인지" 식별할 익명 쿠키 대체재.
+/// 사용자 키 + 테마 모드 같은 단말 보존 설정 저장소.
 class UserPreferencesService {
   static const _keyUserApiKey = 'user_kanana_api_key';
-  static const _keyClientId = 'amuguna_client_id';
-  static const _uuid = Uuid();
+  static const _keyThemeMode = 'theme_mode';
 
   SharedPreferences? _prefs;
 
@@ -37,15 +32,28 @@ class UserPreferencesService {
 
   Future<bool> hasUserApiKey() async => (await getUserApiKey()) != null;
 
-  /// 익명 클라이언트 ID (최초 호출 시 발급·저장).
-  /// 서버 쿼터 카운터가 동일 사용자 여부를 식별할 때 사용.
-  Future<String> getOrCreateClientId() async {
+  /// 저장된 ThemeMode. 기본값은 시스템 follow.
+  Future<ThemeMode> getThemeMode() async {
     final prefs = await _getPrefs();
-    var id = prefs.getString(_keyClientId);
-    if (id == null || id.isEmpty) {
-      id = _uuid.v4();
-      await prefs.setString(_keyClientId, id);
+    final raw = prefs.getString(_keyThemeMode);
+    switch (raw) {
+      case 'light':
+        return ThemeMode.light;
+      case 'dark':
+        return ThemeMode.dark;
+      case 'system':
+      default:
+        return ThemeMode.system;
     }
-    return id;
+  }
+
+  Future<void> setThemeMode(ThemeMode mode) async {
+    final prefs = await _getPrefs();
+    final raw = switch (mode) {
+      ThemeMode.light => 'light',
+      ThemeMode.dark => 'dark',
+      ThemeMode.system => 'system',
+    };
+    await prefs.setString(_keyThemeMode, raw);
   }
 }

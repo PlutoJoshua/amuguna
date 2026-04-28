@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../core/constants/app_colors.dart';
+import '../../../../core/theme/theme_context_ext.dart';
 import '../../../../core/constants/app_strings.dart';
 import '../../../chat/presentation/providers/chat_provider.dart';
 
@@ -28,9 +28,9 @@ class HomeScreen extends ConsumerWidget {
                   children: [
                     IconButton(
                       tooltip: '로그',
-                      icon: const Icon(
+                      icon: Icon(
                         Icons.folder_outlined,
-                        color: AppColors.textSecondary,
+                        color: context.colors.textSecondary,
                       ),
                       onPressed: () => context.push('/debug-log'),
                     ),
@@ -39,8 +39,8 @@ class HomeScreen extends ConsumerWidget {
                       icon: Icon(
                         hasUserKey ? Icons.vpn_key : Icons.settings_outlined,
                         color: hasUserKey
-                            ? AppColors.primary
-                            : AppColors.textSecondary,
+                            ? context.colors.primary
+                            : context.colors.textSecondary,
                       ),
                       onPressed: () => context.push('/settings'),
                     ),
@@ -55,21 +55,21 @@ class HomeScreen extends ConsumerWidget {
                 style: TextStyle(fontSize: 80),
               ),
               const SizedBox(height: 16),
-              const Text(
+              Text(
                 AppStrings.appName,
                 style: TextStyle(
                   fontSize: 36,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
+                  color: context.colors.textPrimary,
                 ),
               ),
               const SizedBox(height: 8),
-              const Text(
+              Text(
                 AppStrings.appTagline,
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 14,
-                  color: AppColors.textSecondary,
+                  color: context.colors.textSecondary,
                   height: 1.5,
                 ),
               ),
@@ -82,7 +82,7 @@ class HomeScreen extends ConsumerWidget {
                 icon: Icons.mic,
                 title: AppStrings.modeATitle,
                 subtitle: '음성으로 "아무거나" 번역하기',
-                color: AppColors.primary,
+                color: context.colors.primary,
                 onTap: () => context.go('/chat'),
               ),
 
@@ -94,7 +94,7 @@ class HomeScreen extends ConsumerWidget {
                 icon: Icons.camera_alt,
                 title: AppStrings.modeBTitle,
                 subtitle: '메뉴판 찍고 골라주기',
-                color: AppColors.surfaceLight,
+                color: context.colors.surfaceLight,
                 onTap: () => context.go('/menu-scan'),
               ),
 
@@ -114,38 +114,58 @@ class HomeScreen extends ConsumerWidget {
     required Color color,
     required VoidCallback onTap,
   }) {
+    final isPrimary = color == context.colors.primary;
+    final fg = isPrimary ? Colors.black : context.colors.textPrimary;
+    final fgSubtle =
+        isPrimary ? Colors.black.withValues(alpha: 0.55) : context.colors.textSecondary;
+    final fgFaint =
+        isPrimary ? Colors.black.withValues(alpha: 0.4) : context.colors.textSecondary;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: color == AppColors.primary
-              ? AppColors.primary
-              : AppColors.surface,
+          color: isPrimary ? context.colors.primary : context.colors.surfaceLight,
           borderRadius: BorderRadius.circular(20),
-          border: color != AppColors.primary
+          border: !isPrimary
               ? Border.all(
-                  color: Colors.white.withValues(alpha: 0.1),
+                  color: context.isDark
+                      ? Colors.white.withValues(alpha: 0.12)
+                      : Colors.black.withValues(alpha: 0.08),
                 )
               : null,
-          boxShadow: color == AppColors.primary
+          boxShadow: isPrimary
               ? [
+                  // 컬러 글로우 (primary 색상 발광)
                   BoxShadow(
-                    color: AppColors.primary.withValues(alpha: 0.3),
-                    blurRadius: 20,
+                    color: context.colors.primary.withValues(alpha: 0.45),
+                    blurRadius: 28,
+                    spreadRadius: -4,
+                    offset: const Offset(0, 6),
+                  ),
+                  // 깊이 그림자 (떠 있는 느낌)
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: context.isDark ? 0.25 : 0.10),
+                    blurRadius: 12,
                     offset: const Offset(0, 4),
                   ),
                 ]
-              : null,
+              : [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: context.isDark ? 0.18 : 0.05),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
         ),
         child: Row(
           children: [
             Icon(
               icon,
               size: 32,
-              color:
-                  color == AppColors.primary ? Colors.black : AppColors.primary,
+              color: isPrimary ? Colors.black : context.colors.primary,
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -157,9 +177,7 @@ class HomeScreen extends ConsumerWidget {
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: color == AppColors.primary
-                          ? Colors.black
-                          : AppColors.textPrimary,
+                      color: fg,
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -167,9 +185,7 @@ class HomeScreen extends ConsumerWidget {
                     subtitle,
                     style: TextStyle(
                       fontSize: 12,
-                      color: color == AppColors.primary
-                          ? Colors.black54
-                          : AppColors.textSecondary,
+                      color: fgSubtle,
                     ),
                   ),
                 ],
@@ -178,9 +194,7 @@ class HomeScreen extends ConsumerWidget {
             Icon(
               Icons.arrow_forward_ios,
               size: 16,
-              color: color == AppColors.primary
-                  ? Colors.black45
-                  : AppColors.textSecondary,
+              color: fgFaint,
             ),
           ],
         ),

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/constants/app_colors.dart';
+import '../../../../core/theme/app_palette.dart';
 
 enum DecisionType { intuit, analyst, vibe, zen }
 
@@ -47,13 +47,13 @@ extension DecisionTypeExtension on DecisionType {
   Color get color {
     switch (this) {
       case DecisionType.intuit:
-        return AppColors.intuit;
+        return AppPalette.intuit;
       case DecisionType.analyst:
-        return AppColors.analyst;
+        return AppPalette.analyst;
       case DecisionType.vibe:
-        return AppColors.vibe;
+        return AppPalette.vibe;
       case DecisionType.zen:
-        return AppColors.zen;
+        return AppPalette.zen;
     }
   }
 

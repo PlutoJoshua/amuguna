@@ -9,7 +9,6 @@ import '../../../../core/audio/audio_player_service.dart';
 import '../../../../core/audio/audio_recorder_service.dart';
 import '../../../../core/constants/api_config.dart';
 import '../../../../core/network/kanana_client.dart';
-import '../../../../core/services/api_usage_service.dart';
 import '../../../../core/services/user_preferences_service.dart';
 import '../../../debug_log/data/models/debug_log_entry.dart';
 import '../../../debug_log/presentation/providers/debug_log_provider.dart';
@@ -29,36 +28,19 @@ final userPreferencesServiceProvider = Provider<UserPreferencesService>(
 /// `kananaClientProvider`가 자동으로 새 클라이언트를 만든다.
 final userApiKeyProvider = StateProvider<String?>((ref) => null);
 
-/// 익명 클라이언트 ID — 서버 쿼터 카운터용.
-/// `main()`에서 override로 주입.
-final clientIdProvider = StateProvider<String?>((ref) => null);
+/// 사용 가능한 API 키. 사용자 입력 키 → dart-define 키 → 빈 문자열 순으로 fallback.
+/// 빈 문자열이면 키 미설정 (라우팅 가드가 설정 화면으로 보낸다).
+final effectiveApiKeyProvider = Provider<String>((ref) {
+  final userKey = ref.watch(userApiKeyProvider);
+  if (userKey != null && userKey.isNotEmpty) return userKey;
+  return ApiConfig.dartDefineApiKey;
+});
 
 final kananaClientProvider = Provider<KananaClient>((ref) {
-  final userKey = ref.watch(userApiKeyProvider);
-  final clientId = ref.watch(clientIdProvider);
-
-  // baseUrl 결정: 프록시 모드 vs 직접 호출
-  final baseUrl = ApiConfig.useProxy
-      ? '${ApiConfig.proxyBaseUrl}/api/kanana-proxy'
-      : ApiConfig.kananaDirectBaseUrl;
-
-  // apiKey 결정:
-  // 1) 사용자가 직접 입력한 키가 있으면 그걸 사용 (프록시가 그대로 forward, 쿼터 X)
-  // 2) 프록시 모드인데 사용자 키 없으면 빈 문자열 (서버가 공용 키 주입, 쿼터 O)
-  // 3) 직접 호출 모드면 dart-define 키 사용
-  final String apiKey;
-  if (userKey != null && userKey.isNotEmpty) {
-    apiKey = userKey;
-  } else if (!ApiConfig.useProxy) {
-    apiKey = ApiConfig.directApiKey;
-  } else {
-    apiKey = '';
-  }
-
+  final apiKey = ref.watch(effectiveApiKeyProvider);
   final client = KananaClient(
-    baseUrl: baseUrl,
+    baseUrl: ApiConfig.baseUrl,
     apiKey: apiKey,
-    clientId: clientId,
   );
   ref.onDispose(() => client.dispose());
   return client;
@@ -80,26 +62,12 @@ final audioPlayerProvider = Provider<AudioPlayerService>((ref) {
   return player;
 });
 
-final apiUsageProvider = Provider<ApiUsageService>((ref) {
-  return ApiUsageService();
-});
-
-final remainingCallsProvider = StateProvider<int>((ref) => ApiUsageService.dailyLimit);
-
 final chatNotifierProvider =
     StateNotifierProvider<ChatNotifier, ChatState>((ref) {
   return ChatNotifier(
     repository: ref.read(chatRepositoryProvider),
     recorder: ref.read(audioRecorderProvider),
     player: ref.read(audioPlayerProvider),
-    apiUsage: ref.read(apiUsageProvider),
-    // 사용자가 자기 키를 넣었다면 클라이언트 측 쿼터를 우회한다.
-    // (서버 측에서도 Authorization 헤더가 있으면 쿼터 카운트하지 않음)
-    bypassLocalQuota: () =>
-        (ref.read(userApiKeyProvider)?.isNotEmpty ?? false),
-    onRemainingCallsChanged: (remaining) {
-      ref.read(remainingCallsProvider.notifier).state = remaining;
-    },
     addDebugLog: (entry) =>
         ref.read(debugLogProvider.notifier).add(entry),
     updateDebugLogMeta: ({
@@ -143,7 +111,6 @@ class ChatState {
   final double currentAmplitude;
   final int recordingDurationSeconds;
   final List<String> quickReplies;
-  final bool quotaExhausted;
   /// Mode B에서 분석한 메뉴판 첫 장의 썸네일 바이트(채팅 상단 표시용)
   final Uint8List? menuThumbnail;
   /// Mode B에서 사용자가 업로드한 메뉴판 사진 수
@@ -165,7 +132,6 @@ class ChatState {
     this.currentAmplitude = -160.0,
     this.recordingDurationSeconds = 0,
     this.quickReplies = const [],
-    this.quotaExhausted = false,
     this.menuThumbnail,
     this.menuPhotoCount = 0,
   });
@@ -185,7 +151,6 @@ class ChatState {
     double? currentAmplitude,
     int? recordingDurationSeconds,
     List<String>? quickReplies,
-    bool? quotaExhausted,
     Uint8List? menuThumbnail,
     int? menuPhotoCount,
   }) {
@@ -206,7 +171,6 @@ class ChatState {
       recordingDurationSeconds:
           recordingDurationSeconds ?? this.recordingDurationSeconds,
       quickReplies: quickReplies ?? this.quickReplies,
-      quotaExhausted: quotaExhausted ?? this.quotaExhausted,
       menuThumbnail: menuThumbnail ?? this.menuThumbnail,
       menuPhotoCount: menuPhotoCount ?? this.menuPhotoCount,
     );
@@ -222,9 +186,6 @@ class ChatNotifier extends StateNotifier<ChatState> {
   final ChatRepository _repository;
   final AudioRecorderService _recorder;
   final AudioPlayerService _player;
-  final ApiUsageService _apiUsage;
-  final bool Function()? bypassLocalQuota;
-  final void Function(int remaining)? onRemainingCallsChanged;
   final void Function(DebugLogEntry)? addDebugLog;
   final void Function({
     required String sessionId,
@@ -253,50 +214,16 @@ class ChatNotifier extends StateNotifier<ChatState> {
     required ChatRepository repository,
     required AudioRecorderService recorder,
     required AudioPlayerService player,
-    required ApiUsageService apiUsage,
-    this.bypassLocalQuota,
-    this.onRemainingCallsChanged,
     this.addDebugLog,
     this.updateDebugLogMeta,
   })  : _repository = repository,
         _recorder = recorder,
         _player = player,
-        _apiUsage = apiUsage,
         super(ChatState(
           sessionId: _uuid.v4(),
           startTime: DateTime.now(),
         )) {
     _addAssistantGreeting();
-    _initRemainingCalls();
-  }
-
-  bool get _shouldBypassQuota => bypassLocalQuota?.call() ?? false;
-
-  Future<void> _initRemainingCalls() async {
-    if (_shouldBypassQuota) return;
-    final remaining = await _apiUsage.getRemainingCalls();
-    onRemainingCallsChanged?.call(remaining);
-  }
-
-  /// API 호출 전 쿼터 체크. 소진 시 false 반환 + 에러 메시지 표시.
-  /// 사용자 키 모드면 무조건 통과.
-  Future<bool> _checkQuota() async {
-    if (_shouldBypassQuota) return true;
-    if (!await _apiUsage.canMakeCall()) {
-      state = state.copyWith(isStreaming: false, quotaExhausted: true);
-      return false;
-    }
-    return true;
-  }
-
-  /// API 호출 후 카운터 기록. 사용자 키 모드면 생략.
-  Future<void> _recordApiCall() async {
-    if (_shouldBypassQuota) return;
-    final remaining = await _apiUsage.recordCall();
-    onRemainingCallsChanged?.call(remaining);
-    if (remaining <= 0) {
-      state = state.copyWith(quotaExhausted: true);
-    }
   }
 
   @override
@@ -405,8 +332,6 @@ class ChatNotifier extends StateNotifier<ChatState> {
     _lastInputText = null;
     _lastAudioBase64 = audioBase64;
 
-    if (!await _checkQuota()) return;
-
     // 사용자 메시지 추가 (음성은 텍스트 미리보기 없이)
     final userMessage = ChatMessage(
       id: _uuid.v4(),
@@ -431,7 +356,6 @@ class ChatNotifier extends StateNotifier<ChatState> {
   /// 텍스트 메시지 전송
   Future<void> sendTextMessage(String text) async {
     if (text.trim().isEmpty || state.isStreaming) return;
-    if (!await _checkQuota()) return;
     // 디버그 로그용 입력 메타
     _lastInputWasVoice = false;
     _lastAudioBytes = null;
@@ -522,22 +446,15 @@ class ChatNotifier extends StateNotifier<ChatState> {
       }
     } catch (e) {
       debugPrint('Stream error: $e');
-      // 서버 쿼터 소진(429)이면 퀵 오버레이로 전환
-      if (e is KananaApiException && e.statusCode == 429) {
-        // 빈 placeholder 메시지 제거
-        final trimmed = state.messages
-            .where((m) => m.id != assistantId)
-            .toList();
-        state = state.copyWith(
-          messages: trimmed,
-          isStreaming: false,
-          quotaExhausted: true,
-        );
-        return;
-      }
       String errorMsg;
       if (e is KananaApiException) {
-        errorMsg = '서버 연결에 문제가 생겼어요. (${e.statusCode})';
+        if (e.statusCode == 401 || e.statusCode == 403) {
+          errorMsg = 'API 키가 유효하지 않아요. 설정에서 다시 입력해주세요.';
+        } else if (e.statusCode == 429) {
+          errorMsg = 'API 호출 한도에 도달했어요. 잠시 후 다시 시도해주세요.';
+        } else {
+          errorMsg = '서버 연결에 문제가 생겼어요. (${e.statusCode})';
+        }
       } else if (e is TimeoutException) {
         errorMsg = '응답 시간이 초과됐어요.';
       } else {
@@ -663,9 +580,6 @@ class ChatNotifier extends StateNotifier<ChatState> {
       quickReplies: parsedQuickReplies,
     );
 
-    // API 호출 카운터 기록
-    await _recordApiCall();
-
     // 디버그 로그 적재
     addDebugLog?.call(DebugLogEntry(
       sessionId: state.sessionId,
@@ -787,12 +701,6 @@ class ChatNotifier extends StateNotifier<ChatState> {
     required int turnIndex,
   }) async {
     try {
-      if (!_shouldBypassQuota) {
-        if (!await _apiUsage.canMakeCall()) {
-          debugPrint('[TRANSCRIBE FALLBACK] Skipped — local quota exhausted');
-          return;
-        }
-      }
       final raw = await _repository.transcribeVoice(audioBase64);
       debugPrint('[TRANSCRIBE FALLBACK RAW] ${raw.replaceAll('\n', ' | ')}');
 
@@ -861,8 +769,6 @@ class ChatNotifier extends StateNotifier<ChatState> {
       if (ruledDecision != null) {
         state = state.copyWith(decision: ruledDecision);
       }
-
-      await _recordApiCall();
     } catch (e) {
       debugPrint('[TRANSCRIBE FALLBACK] Failed: $e');
     }

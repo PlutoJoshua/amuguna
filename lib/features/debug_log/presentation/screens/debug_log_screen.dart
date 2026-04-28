@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../core/constants/app_colors.dart';
+import '../../../../core/theme/theme_context_ext.dart';
 import '../../../chat/data/models/chat_message.dart';
 import '../../data/models/debug_log_entry.dart';
 import '../providers/debug_log_provider.dart';
@@ -75,7 +75,7 @@ class _EmptyState extends StatelessWidget {
           Text(
             '아직 기록된 대화가 없어요',
             style: TextStyle(
-              color: AppColors.textSecondary.withValues(alpha: 0.8),
+              color: context.colors.textSecondary.withValues(alpha: 0.8),
               fontSize: 14,
             ),
           ),
@@ -113,7 +113,7 @@ class _SessionFolder extends StatelessWidget {
         ),
         child: Container(
           decoration: BoxDecoration(
-            color: AppColors.surface,
+            color: context.colors.surface,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: Colors.white.withValues(alpha: 0.05),
@@ -121,12 +121,12 @@ class _SessionFolder extends StatelessWidget {
           ),
           child: ExpansionTile(
             initiallyExpanded: isMostRecent,
-            leading: const Icon(Icons.folder_outlined,
-                color: AppColors.primary, size: 22),
+            leading: Icon(Icons.folder_outlined,
+                color: context.colors.primary, size: 22),
             title: Text(
               '$modeLabel · $dateStr',
-              style: const TextStyle(
-                color: AppColors.textPrimary,
+              style: TextStyle(
+                color: context.colors.textPrimary,
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
               ),
@@ -134,7 +134,7 @@ class _SessionFolder extends StatelessWidget {
             subtitle: Text(
               '$shortId · ${entries.length}턴',
               style: TextStyle(
-                color: AppColors.textSecondary.withValues(alpha: 0.7),
+                color: context.colors.textSecondary.withValues(alpha: 0.7),
                 fontSize: 11,
               ),
             ),
@@ -163,12 +163,12 @@ class _TurnTile extends StatelessWidget {
       margin: const EdgeInsets.only(top: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.background.withValues(alpha: 0.6),
+        color: context.colors.background.withValues(alpha: 0.6),
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
           color: entry.metaSeparated
-              ? AppColors.primary.withValues(alpha: 0.2)
-              : AppColors.recordingRed.withValues(alpha: 0.3),
+              ? context.colors.primary.withValues(alpha: 0.2)
+              : context.colors.recordingRed.withValues(alpha: 0.3),
           width: 0.5,
         ),
       ),
@@ -181,7 +181,7 @@ class _TurnTile extends StatelessWidget {
               Text(
                 '#${entry.turnIndex + 1} · $timeStr',
                 style: TextStyle(
-                  color: AppColors.textSecondary.withValues(alpha: 0.8),
+                  color: context.colors.textSecondary.withValues(alpha: 0.8),
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
                 ),
@@ -191,15 +191,15 @@ class _TurnTile extends StatelessWidget {
                 _Chip(
                   label:
                       '🎙️ ${entry.audioSeconds?.toStringAsFixed(1) ?? "?"}s · ${((entry.audioBytes ?? 0) / 1024).toStringAsFixed(0)}KB',
-                  color: AppColors.primary,
+                  color: context.colors.primary,
                 )
               else
-                const _Chip(label: '⌨️ 텍스트', color: AppColors.primary),
+                _Chip(label: '⌨️ 텍스트', color: context.colors.primary),
               const Spacer(),
               if (!entry.metaSeparated)
-                const _Chip(
+                _Chip(
                   label: 'META 분리 실패',
-                  color: AppColors.recordingRed,
+                  color: context.colors.recordingRed,
                 ),
             ],
           ),
@@ -296,7 +296,7 @@ class _Section extends StatelessWidget {
             child: Text(
               label,
               style: TextStyle(
-                color: AppColors.textSecondary.withValues(alpha: 0.65),
+                color: context.colors.textSecondary.withValues(alpha: 0.65),
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
               ),
@@ -306,7 +306,7 @@ class _Section extends StatelessWidget {
             child: Text(
               value,
               style: TextStyle(
-                color: AppColors.textPrimary,
+                color: context.colors.textPrimary,
                 fontSize: 12,
                 height: 1.4,
                 fontStyle: italic ? FontStyle.italic : FontStyle.normal,
@@ -352,12 +352,12 @@ class _ExpandableSectionState extends State<_ExpandableSection> {
                       ? Icons.keyboard_arrow_down
                       : Icons.keyboard_arrow_right,
                   size: 16,
-                  color: AppColors.textSecondary.withValues(alpha: 0.7),
+                  color: context.colors.textSecondary.withValues(alpha: 0.7),
                 ),
                 Text(
                   widget.label,
                   style: TextStyle(
-                    color: AppColors.textSecondary.withValues(alpha: 0.85),
+                    color: context.colors.textSecondary.withValues(alpha: 0.85),
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
                   ),
@@ -366,7 +366,7 @@ class _ExpandableSectionState extends State<_ExpandableSection> {
                   const Spacer(),
                   IconButton(
                     icon: const Icon(Icons.copy, size: 14),
-                    color: AppColors.textSecondary.withValues(alpha: 0.7),
+                    color: context.colors.textSecondary.withValues(alpha: 0.7),
                     visualDensity: VisualDensity.compact,
                     padding: EdgeInsets.zero,
                     constraints:

@@ -4,63 +4,18 @@
 >
 > Kanana-o 멀티모달 AI로 목소리에서 숨은 선호를 읽어주는 의사결정 도우미
 
-[![Powered by Kanana-o](https://img.shields.io/badge/Powered%20by-Kanana--o-FFCD00?style=flat-square&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0Ij48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSIxMCIgZmlsbD0iI0ZGQ0QwMCIvPjwvc3ZnPg==)]()
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)]()
-[![Kakao AI Ambassador](https://img.shields.io/badge/Kakao-AI%20Ambassador-FFCD00?style=flat-square)]()
+[![Built with Kanana-o](https://img.shields.io/badge/Built%20with-Kanana--o-FFD43B?style=flat-square)]()
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](LICENSE)
+[![Kakao AI Ambassador](https://img.shields.io/badge/Kakao-AI%20Ambassador-FFD43B?style=flat-square)]()
 
----
-
-## 🚀 빠른 시작
-
-### 요구사항
-
-- Flutter 3.29+ / Dart 3.8+
-- 지원 플랫폼: **iOS / Android / macOS / Web**
-- Kanana-o API 키 (개인 베타 키 또는 공용 프록시 경유)
-
-### 로컬 실행 — 직접 호출 모드 (네이티브 앱 전용)
-
-자기 Kanana-o 키를 직접 빌드에 주입. 가장 단순.
-
-```bash
-flutter pub get
-
-# macOS 데스크탑 (개발 추천 — 빌드 빠름, 마이크 즉시)
-flutter run -d macos --dart-define=KANANA_API_KEY=your_api_key_here
-
-# iOS / Android 실기기
-flutter run --dart-define=KANANA_API_KEY=your_api_key_here
-
-# 릴리즈 빌드
-flutter build ios     --dart-define=KANANA_API_KEY=your_api_key_here
-flutter build apk     --dart-define=KANANA_API_KEY=your_api_key_here
-flutter build macos   --dart-define=KANANA_API_KEY=your_api_key_here
-```
-
-> ⚠️ **웹 빌드는 직접 호출 모드 불가** — Kanana-o API가 CORS를 지원하지 않아 브라우저에서 직접 호출 시 차단된다. 웹은 반드시 아래 프록시 경유 모드로 빌드한다.
-
-### 로컬 실행 — 프록시 경유 모드 (웹 빌드 또는 퍼블릭 베타용)
-
-서버 측 프록시(Firebase Functions)에서 키를 주입하므로 빌드 산출물에 키가 노출되지 않는다.
-
-```bash
-flutter build web --release \
-  --dart-define=PROXY_BASE_URL=https://<your-firebase-project>.web.app
-```
-
-프록시 + 호스팅 배포 절차는 [DEPLOY.md](DEPLOY.md) 참고.
-
-### 사용자 본인 키 입력 (앱 내 설정)
-
-빌드에 키를 안 넣었거나 공용 쿼터(하루 20명)를 우회하고 싶을 때, 앱 홈 우상단 **⚙️** 또는 쿼터 소진 화면에서 본인 Kanana-o 키를 입력하면 클라이언트에서 직접 호출 헤더에 실어 보낸다. 키는 `shared_preferences`로 단말에만 저장되고 서버 측 쿼터를 소모하지 않는다.
-
-> **키 보안**: 코드에 절대 직접 박지 말고 `--dart-define` 또는 사용자 입력 경로만 쓴다. `.env`/`firebase functions:secrets:set KANANA_API_KEY`로 서버 비밀에 저장.
+> ℹ️ **비공식 프로젝트.** 카카오 AI 앰배서더 Kanana-o 베타 테스트 프로그램의 일환으로 개인이 제작한 프로젝트이며, 카카오 또는 Kanana 팀의 공식 프로덕트가 아닙니다.
 
 ---
 
 ## 📋 목차
 
 - [프로젝트 개요](#프로젝트-개요)
+- [빠른 시작](#-빠른-시작)
 - [현재 구현 상태](#현재-구현-상태) ← 최신 진행
 - [왜 "아무거나"인가?](#왜-아무거나인가)
 - [핵심 컨셉: 3대 한국 문화 훅포인트](#핵심-컨셉-3대-한국-문화-훅포인트)
@@ -106,6 +61,49 @@ flutter build web --release \
 
 ---
 
+## 🚀 빠른 시작
+
+> **BYO-key 프로젝트입니다.** 본 레포는 공용 데모를 운영하지 않으며, 사용자가 자신의 Kanana-o API 키를 발급받아 직접 입력해야 동작합니다. 호출 비용은 본인 계정으로 청구됩니다.
+
+### 요구사항
+
+- Flutter 3.29+ / Dart 3.8+
+- 지원 플랫폼: **iOS / Android / macOS** (웹은 미지원 — 아래 [웹 빌드 안내](#웹-빌드-안내) 참고)
+- 본인의 Kanana-o API 키 — 카카오 Kanana 앰배서더/베타 프로그램에서 발급. [공식 문서](https://huggingface.co/kakaocorp/Kanana-1.5-o-9.8B-instruct-2602-API_Doc)
+
+### 권장 — 앱 내에서 키 입력 (가장 안전)
+
+빌드에 키를 박지 않고 앱 첫 실행 시 설정 화면에서 직접 입력하는 방식. 키는 `shared_preferences`로 **단말에만 저장**되며 외부로 전송되지 않습니다.
+
+```bash
+flutter pub get
+
+# 키 없이 그냥 실행
+flutter run -d macos          # macOS 데스크탑 (개발 추천)
+flutter run                   # iOS / Android 실기기 또는 시뮬레이터
+```
+
+앱이 열리면 자동으로 설정 화면이 뜨며, 키를 입력 후 메인 화면으로 이동합니다.
+
+### 옵션 — dart-define으로 빌드에 주입 (개발용)
+
+매번 입력이 번거로우면 빌드 시 환경변수로 주입할 수 있습니다. **공유 빌드(앱스토어 / TestFlight 등)에는 절대 사용하지 마세요** — 빌드 산출물에 키가 박힙니다.
+
+```bash
+flutter run --dart-define=KANANA_API_KEY=your_api_key_here
+
+# 릴리즈 빌드
+flutter build ios     --dart-define=KANANA_API_KEY=your_api_key_here
+flutter build apk     --dart-define=KANANA_API_KEY=your_api_key_here
+flutter build macos   --dart-define=KANANA_API_KEY=your_api_key_here
+```
+
+### 웹 빌드 안내
+
+Kanana-o API 엔드포인트는 CORS preflight(OPTIONS)에 응답하지 않아 브라우저에서 직접 호출이 차단됩니다. 웹 환경을 지원하려면 **본인이 별도의 CORS 프록시를 호스팅**해야 하며, 본 레포는 프록시 코드를 포함하지 않습니다 (구버전 git 히스토리에 Firebase Functions 기반 예시가 있음).
+
+---
+
 ## 현재 구현 상태
 
 > 카카오 Kanana-o 베타테스트 기간 동안 실험·개선이 진행 중인 부분과, 이미 동작하는 부분을 분리해 정리.
@@ -121,15 +119,14 @@ flutter build web --release \
 | 받아쓰기 폴백 — 메인 호출이 USER_HEARD 빠뜨려도 단일 목적 호출로 보강 | ✅ |
 | 룰베이스 메타 추출기 — EMOTION/INTENT/DECISION을 본문 키워드로 보완 | ✅ |
 | 디버그 로그 화면 — 세션별 폴더 + 턴별 입력/메타/raw 응답 ([/debug-log](lib/features/debug_log/presentation/screens/debug_log_screen.dart)) | ✅ |
-| 하이브리드 키 모드 — 빌드 키 / 사용자 키 입력 / 프록시 공용 키 (3-way) | ✅ |
-| Firebase Functions 프록시 + Firestore 쿼터 (하루 N명 선착순) | ✅ |
+| BYO-key 모드 — 사용자 키 입력 + 라우팅 가드(키 미설정 시 설정 화면 강제) | ✅ |
 | macOS 데스크탑 빌드 — 마이크/네트워크 entitlements 설정 완료 | ✅ |
 | Mode B UX — 분석 중 spinner / 결과 확인 단계 / 채팅 상단 메뉴판 칩 | ✅ |
 
 ### ⚠️ 알려진 제약
 
 - **Kanana-o 음성 모달리티에서 시스템 프롬프트 후반부를 자주 무시** — `[USER_HEARD]` `[INTENT]` `[EMOTION]` 같은 메타 태그가 매 응답마다 일관되게 나오지 않음. 이걸 보완하려고 받아쓰기 폴백 + 룰베이스 추출을 도입.
-- **Kanana-o API CORS 미지원** — 웹 빌드는 반드시 프록시 경유.
+- **Kanana-o API CORS 미지원** — 웹 빌드는 미지원. 셀프 호스팅 프록시 필요.
 - **녹음 sample rate** — record 패키지가 macOS에서 16kHz 강제를 일부 무시할 수 있어 WAV 파일 길이가 실제보다 길게 표기될 수 있음. 인식 자체는 동작.
 - **음성은 60초 이내 권장** — Kanana-o 서버가 60s 초과 음성 거부. 클라이언트에서 50초 하드 리밋.
 
@@ -614,11 +611,9 @@ TTS (Voicebox + Univnet) ← "사람의 입" — 자연스러운 음성 생성
 | **라우팅** | go_router 14.x | 선언적 라우트, 딥링크 친화 |
 | **음성 캡처** | record 5.x (mobile/web 분기) | 16kHz mono WAV. macOS는 `AudioEncoder.wav`로 헤더 직접 작성 |
 | **음성 재생** | just_audio 0.9.x (StreamAudioSource) | Kanana-o가 보내는 24kHz 청크를 인메모리 스트림으로 재생 |
-| **AI 통신** | http.Client + 자체 SSE 파서 ([kanana_client.dart](lib/core/network/kanana_client.dart)) | OpenAI SDK 호환. base_url/apiKey/clientId 런타임 주입 |
-| **저장소** | shared_preferences | 사용자 키, 익명 클라이언트 ID, 일일 호출 카운터 |
-| **백엔드 프록시** | Firebase Functions v2 (TypeScript) | CORS 처리 + Firestore 쿼터 트랜잭션 + SSE pass-through |
-| **호스팅** | Firebase Hosting + Firestore | 정적 + Functions rewrite + 보안 규칙 |
-| **배포 가이드** | [DEPLOY.md](DEPLOY.md) | Secret 주입, Hosting/Functions deploy, 스모크 테스트 절차 |
+| **AI 통신** | http.Client + 자체 SSE 파서 ([kanana_client.dart](lib/core/network/kanana_client.dart)) | OpenAI SDK 호환. base_url/apiKey 런타임 주입 |
+| **저장소** | shared_preferences | 사용자 키만 (BYO-key) |
+| **백엔드** | 없음 (BYO-key, 클라이언트 → Kanana-o 직접 호출) | 운영 비용 0, 어뷰즈 표적 X |
 
 ---
 
@@ -1043,9 +1038,8 @@ class AudioProcessor {
 
 **공통/인프라**:
 - [x] 결정 유형 카드 디자인 4종
-- [x] 하이브리드 키 모드 (빌드 키 / 사용자 입력 / 프록시 공용)
+- [x] BYO-key 모드 (사용자 키 입력 + 라우팅 가드)
 - [x] 디버그 로그 화면 (세션 폴더 + 턴별 raw/메타)
-- [x] Firebase Functions 프록시 + Firestore 쿼터
 - [x] 반응형 모바일 UI (다크 테마)
 - [ ] 카카오톡 공유 (결정 유형 카드 OG 이미지)
 
@@ -1110,7 +1104,9 @@ class AudioProcessor {
 
 ## 라이선스
 
-MIT License
+MIT License — 자세한 내용은 [LICENSE](LICENSE) 파일을 참고하세요.
+
+> ⚠️ **상표 안내**: "Kanana", "Kanana-o", "Kakao"는 카카오의 상표이며, 본 프로젝트는 해당 API/서비스를 사용할 뿐 카카오의 공식 프로덕트가 아닙니다. 본 프로젝트의 MIT 라이선스는 코드에만 적용되며, 카카오 상표 사용권을 부여하지 않습니다.
 
 ---
 
@@ -1120,10 +1116,9 @@ MIT License
 
 ### 관련 문서
 
-- [DEPLOY.md](DEPLOY.md) — Firebase Hosting + Functions + Firestore 배포 절차
 - [lib/features/debug_log/](lib/features/debug_log/) — 매 턴의 입력/응답/메타 추적용 로그 화면
 - [lib/features/chat/data/services/meta_extractor.dart](lib/features/chat/data/services/meta_extractor.dart) — 모델 메타 누락 시 룰베이스 추출
-- [functions/src/index.ts](functions/src/index.ts) — 사용자 키 forward + 공용 키 쿼터 트랜잭션
+- [lib/core/network/kanana_client.dart](lib/core/network/kanana_client.dart) — Kanana-o 직접 호출 클라이언트 (OpenAI 호환 + SSE 스트리밍 파서)
 
 ---
 

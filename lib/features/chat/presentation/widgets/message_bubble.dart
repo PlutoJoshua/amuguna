@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/constants/app_colors.dart';
+import '../../../../core/theme/theme_context_ext.dart';
 import '../../data/models/chat_message.dart';
 import 'emotion_gauge.dart';
 
@@ -27,21 +27,21 @@ class MessageBubble extends StatelessWidget {
             isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (!isUser) _buildAvatar(),
+          if (!isUser) _buildAvatar(context),
           const SizedBox(width: 8),
-          Flexible(child: _buildContent()),
+          Flexible(child: _buildContent(context)),
           if (isUser) const SizedBox(width: 8),
         ],
       ),
     );
   }
 
-  Widget _buildAvatar() {
+  Widget _buildAvatar(BuildContext context) {
     return Container(
       width: 36,
       height: 36,
       decoration: BoxDecoration(
-        color: AppColors.primary,
+        color: context.colors.primary,
         borderRadius: BorderRadius.circular(12),
       ),
       child: const Center(
@@ -50,11 +50,18 @@ class MessageBubble extends StatelessWidget {
     );
   }
 
-  Widget _buildContent() {
-    if (message.isError) return _buildErrorContent();
+  Widget _buildContent(BuildContext context) {
+    if (message.isError) return _buildErrorContent(context);
 
     final hasTranscript =
         isUser && message.transcript != null && message.transcript!.isNotEmpty;
+
+    // 라이트 모드의 aiBubble은 밝은 회색-블루라 흰 텍스트는 안 보임 → 자동 분기
+    final bubbleColor =
+        isUser ? context.colors.userBubble : context.colors.aiBubble;
+    final onBubble =
+        bubbleColor.computeLuminance() > 0.5 ? Colors.black : Colors.white;
+    final onBubbleSubtle = onBubble.withValues(alpha: 0.55);
 
     return Column(
       crossAxisAlignment:
@@ -63,7 +70,7 @@ class MessageBubble extends StatelessWidget {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
-            color: isUser ? AppColors.userBubble : AppColors.aiBubble,
+            color: bubbleColor,
             borderRadius: BorderRadius.only(
               topLeft: const Radius.circular(18),
               topRight: const Radius.circular(18),
@@ -84,7 +91,7 @@ class MessageBubble extends StatelessWidget {
                     Text(
                       'AI가 받아 적은 말',
                       style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.55),
+                        color: onBubbleSubtle,
                         fontSize: 11,
                         fontWeight: FontWeight.w500,
                       ),
@@ -94,8 +101,8 @@ class MessageBubble extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   '"${message.transcript!}"',
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
+                  style: TextStyle(
+                    color: onBubble,
                     fontSize: 15,
                     height: 1.4,
                     fontStyle: FontStyle.italic,
@@ -104,8 +111,8 @@ class MessageBubble extends StatelessWidget {
               ] else
                 Text(
                   message.text.isEmpty ? '...' : message.text,
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
+                  style: TextStyle(
+                    color: onBubble,
                     fontSize: 15,
                     height: 1.4,
                   ),
@@ -118,19 +125,19 @@ class MessageBubble extends StatelessWidget {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.1),
+                      color: onBubble.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    child: const Row(
+                    child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(Icons.play_arrow,
-                            color: AppColors.primary, size: 18),
-                        SizedBox(width: 4),
+                            color: context.colors.primary, size: 18),
+                        const SizedBox(width: 4),
                         Text(
                           '음성 재생',
                           style: TextStyle(
-                            color: AppColors.primary,
+                            color: context.colors.primary,
                             fontSize: 12,
                           ),
                         ),
@@ -150,11 +157,12 @@ class MessageBubble extends StatelessWidget {
     );
   }
 
-  Widget _buildErrorContent() {
+  Widget _buildErrorContent(BuildContext context) {
+    final errColor = context.colors.recordingRed;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: AppColors.recordingRed.withValues(alpha: 0.15),
+        color: errColor.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(18),
       ),
       child: Column(
@@ -162,14 +170,13 @@ class MessageBubble extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.error_outline,
-                  color: AppColors.recordingRed, size: 18),
+              Icon(Icons.error_outline, color: errColor, size: 18),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   message.text,
                   style: TextStyle(
-                    color: AppColors.recordingRed.withValues(alpha: 0.9),
+                    color: errColor.withValues(alpha: 0.9),
                     fontSize: 14,
                   ),
                 ),
@@ -184,17 +191,24 @@ class MessageBubble extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: AppColors.recordingRed.withValues(alpha: 0.2),
+                  color: errColor.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: const Row(
+                child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.refresh, color: Colors.white70, size: 16),
-                    SizedBox(width: 4),
+                    Icon(Icons.refresh,
+                        color: context.colors.textPrimary
+                            .withValues(alpha: 0.7),
+                        size: 16),
+                    const SizedBox(width: 4),
                     Text(
                       '다시 시도',
-                      style: TextStyle(color: Colors.white70, fontSize: 12),
+                      style: TextStyle(
+                        color: context.colors.textPrimary
+                            .withValues(alpha: 0.7),
+                        fontSize: 12,
+                      ),
                     ),
                   ],
                 ),

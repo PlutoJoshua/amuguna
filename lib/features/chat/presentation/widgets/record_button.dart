@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/constants/app_colors.dart';
+import '../../../../core/theme/theme_context_ext.dart';
 
 class RecordButton extends StatefulWidget {
   final bool isRecording;
@@ -73,12 +73,12 @@ class _RecordButtonState extends State<RecordButton>
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: widget.isRecording
-                    ? AppColors.recordingRed
-                    : AppColors.primary,
+                    ? context.colors.recordingRed
+                    : context.colors.primary,
                 boxShadow: widget.isRecording
                     ? [
                         BoxShadow(
-                          color: AppColors.recordingRed.withValues(
+                          color: context.colors.recordingRed.withValues(
                               alpha: 0.4 + _pulseController.value * 0.3),
                           blurRadius: 20 + _pulseController.value * 10,
                           spreadRadius: 2,
@@ -86,7 +86,7 @@ class _RecordButtonState extends State<RecordButton>
                       ]
                     : [
                         BoxShadow(
-                          color: AppColors.primary.withValues(alpha: 0.3),
+                          color: context.colors.primary.withValues(alpha: 0.3),
                           blurRadius: 12,
                           spreadRadius: 1,
                         ),
@@ -121,16 +121,16 @@ class _RecordButtonState extends State<RecordButton>
       height: 64,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: AppColors.surface,
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+        color: context.colors.surface,
+        border: Border.all(color: context.colors.primary.withValues(alpha: 0.3)),
       ),
-      child: const Center(
+      child: Center(
         child: SizedBox(
           width: 24,
           height: 24,
           child: CircularProgressIndicator(
             strokeWidth: 2.5,
-            valueColor: AlwaysStoppedAnimation(AppColors.primary),
+            valueColor: AlwaysStoppedAnimation(context.colors.primary),
           ),
         ),
       ),

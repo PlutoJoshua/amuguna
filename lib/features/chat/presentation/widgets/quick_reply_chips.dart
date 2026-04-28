@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/constants/app_colors.dart';
+import '../../../../core/theme/theme_context_ext.dart';
 
 class QuickReplyChips extends StatelessWidget {
   final List<String> replies;
@@ -22,13 +22,13 @@ class QuickReplyChips extends StatelessWidget {
         children: replies.map((reply) {
           return ActionChip(
             label: Text(reply),
-            labelStyle: const TextStyle(
-              color: AppColors.primary,
+            labelStyle: TextStyle(
+              color: context.colors.primary,
               fontSize: 13,
             ),
-            backgroundColor: AppColors.primary.withValues(alpha: 0.12),
+            backgroundColor: context.colors.primary.withValues(alpha: 0.12),
             side: BorderSide(
-              color: AppColors.primary.withValues(alpha: 0.3),
+              color: context.colors.primary.withValues(alpha: 0.3),
             ),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(20),

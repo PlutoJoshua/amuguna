@@ -8,7 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
-import '../../../../core/constants/app_colors.dart';
+import '../../../../core/theme/theme_context_ext.dart';
 import '../../../../core/constants/app_strings.dart';
 import '../../../chat/presentation/providers/chat_provider.dart';
 
@@ -40,7 +40,7 @@ class _MenuScanScreenState extends ConsumerState<MenuScanScreen> {
   Future<void> _showImageSourceDialog() async {
     await showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.surface,
+      backgroundColor: context.colors.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -50,12 +50,12 @@ class _MenuScanScreenState extends ConsumerState<MenuScanScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text(
+              Text(
                 '메뉴판 사진 선택',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
+                  color: context.colors.textPrimary,
                 ),
               ),
               const SizedBox(height: 4),
@@ -63,17 +63,17 @@ class _MenuScanScreenState extends ConsumerState<MenuScanScreen> {
                 '여러 장도 가능해요',
                 style: TextStyle(
                   fontSize: 13,
-                  color: AppColors.textSecondary.withValues(alpha: 0.7),
+                  color: context.colors.textSecondary.withValues(alpha: 0.7),
                 ),
               ),
               const SizedBox(height: 20),
               if (_supportsCamera)
                 ListTile(
                   leading:
-                      const Icon(Icons.camera_alt, color: AppColors.primary),
-                  title: const Text(
+                      Icon(Icons.camera_alt, color: context.colors.primary),
+                  title: Text(
                     '카메라로 촬영',
-                    style: TextStyle(color: AppColors.textPrimary),
+                    style: TextStyle(color: context.colors.textPrimary),
                   ),
                   onTap: () {
                     Navigator.pop(context);
@@ -82,10 +82,10 @@ class _MenuScanScreenState extends ConsumerState<MenuScanScreen> {
                 ),
               ListTile(
                 leading:
-                    const Icon(Icons.photo_library, color: AppColors.primary),
-                title: const Text(
+                    Icon(Icons.photo_library, color: context.colors.primary),
+                title: Text(
                   '갤러리에서 선택',
-                  style: TextStyle(color: AppColors.textPrimary),
+                  style: TextStyle(color: context.colors.textPrimary),
                 ),
                 onTap: () {
                   Navigator.pop(context);
@@ -181,7 +181,7 @@ class _MenuScanScreenState extends ConsumerState<MenuScanScreen> {
       if (!mounted) return;
       setState(() {
         _stage = _ScanStage.picking;
-        _error = '메뉴판 분석에 실패했어요. 다시 시도해주세요.';
+        _error = '메뉴판 분석 실패: $e';
       });
     }
   }
@@ -212,7 +212,7 @@ class _MenuScanScreenState extends ConsumerState<MenuScanScreen> {
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: AppColors.textSecondary),
+          icon: Icon(Icons.arrow_back_ios, color: context.colors.textSecondary),
           onPressed: () => context.go('/'),
         ),
         title: const Row(
@@ -249,8 +249,8 @@ class _MenuScanScreenState extends ConsumerState<MenuScanScreen> {
               padding: const EdgeInsets.only(bottom: 12),
               child: Text(
                 _error!,
-                style: const TextStyle(
-                    color: AppColors.recordingRed, fontSize: 13),
+                style: TextStyle(
+                    color: context.colors.recordingRed, fontSize: 13),
               ),
             ),
           _buildPickingButtons(),
@@ -267,18 +267,18 @@ class _MenuScanScreenState extends ConsumerState<MenuScanScreen> {
           Icon(
             Icons.restaurant_menu,
             size: 80,
-            color: AppColors.textSecondary.withValues(alpha: 0.3),
+            color: context.colors.textSecondary.withValues(alpha: 0.3),
           ),
           const SizedBox(height: 16),
-          const Text(
+          Text(
             '메뉴판 사진을 추가해주세요',
-            style: TextStyle(color: AppColors.textSecondary, fontSize: 16),
+            style: TextStyle(color: context.colors.textSecondary, fontSize: 16),
           ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             '여러 장이면 더 정확하게 분석해요',
             textAlign: TextAlign.center,
-            style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+            style: TextStyle(color: context.colors.textSecondary, fontSize: 13),
           ),
         ],
       ),
@@ -348,8 +348,8 @@ class _MenuScanScreenState extends ConsumerState<MenuScanScreen> {
             padding: const EdgeInsets.only(bottom: 8),
             child: Text(
               '${_pickedFiles.length}장 선택됨',
-              style: const TextStyle(
-                  color: AppColors.textSecondary, fontSize: 13),
+              style: TextStyle(
+                  color: context.colors.textSecondary, fontSize: 13),
             ),
           ),
         Row(
@@ -360,9 +360,9 @@ class _MenuScanScreenState extends ConsumerState<MenuScanScreen> {
                 icon: const Icon(Icons.add_photo_alternate),
                 label: Text(_pickedFiles.isNotEmpty ? '사진 추가' : '사진 선택'),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.textPrimary,
+                  foregroundColor: context.colors.textPrimary,
                   side: BorderSide(
-                      color: AppColors.textSecondary.withValues(alpha: 0.3)),
+                      color: context.colors.textSecondary.withValues(alpha: 0.3)),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12)),
@@ -377,7 +377,7 @@ class _MenuScanScreenState extends ConsumerState<MenuScanScreen> {
                   icon: const Icon(Icons.auto_awesome),
                   label: const Text('분석하기'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
+                    backgroundColor: context.colors.primary,
                     foregroundColor: Colors.black,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
@@ -404,26 +404,26 @@ class _MenuScanScreenState extends ConsumerState<MenuScanScreen> {
             width: 88,
             height: 88,
             decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.1),
+              color: context.colors.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(28),
             ),
-            child: const Center(
+            child: Center(
               child: SizedBox(
                 width: 36,
                 height: 36,
                 child: CircularProgressIndicator(
                   strokeWidth: 3,
                   valueColor:
-                      AlwaysStoppedAnimation<Color>(AppColors.primary),
+                      AlwaysStoppedAnimation<Color>(context.colors.primary),
                 ),
               ),
             ),
           ),
           const SizedBox(height: 24),
-          const Text(
+          Text(
             '메뉴판을 분석하고 있어요',
             style: TextStyle(
-              color: AppColors.textPrimary,
+              color: context.colors.textPrimary,
               fontSize: 17,
               fontWeight: FontWeight.bold,
             ),
@@ -431,8 +431,8 @@ class _MenuScanScreenState extends ConsumerState<MenuScanScreen> {
           const SizedBox(height: 6),
           Text(
             '${_pickedFiles.length}장의 사진에서 메뉴를 추출 중…',
-            style: const TextStyle(
-              color: AppColors.textSecondary,
+            style: TextStyle(
+              color: context.colors.textSecondary,
               fontSize: 13,
             ),
           ),
@@ -488,8 +488,8 @@ class _MenuScanScreenState extends ConsumerState<MenuScanScreen> {
                   children: [
                     Text(
                       '분석 완료 · ${_pickedFiles.length}장',
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
+                      style: TextStyle(
+                        color: context.colors.textPrimary,
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
                       ),
@@ -498,7 +498,7 @@ class _MenuScanScreenState extends ConsumerState<MenuScanScreen> {
                     Text(
                       '인식 결과 확인 후 추천을 시작해요',
                       style: TextStyle(
-                        color: AppColors.textSecondary.withValues(alpha: 0.8),
+                        color: context.colors.textSecondary.withValues(alpha: 0.8),
                         fontSize: 12,
                       ),
                     ),
@@ -511,20 +511,28 @@ class _MenuScanScreenState extends ConsumerState<MenuScanScreen> {
           // 결과 본문 (모델 응답 그대로 표시)
           Expanded(
             child: Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(14),
+                color: context.colors.surface,
+                borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: AppColors.primary.withValues(alpha: 0.3),
-                  width: 0.5,
+                  color: context.colors.primary.withValues(alpha: 0.35),
+                  width: 1,
                 ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black
+                        .withValues(alpha: context.isDark ? 0.2 : 0.04),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
               child: SingleChildScrollView(
                 child: Text(
                   _analysisResult ?? '',
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
+                  style: TextStyle(
+                    color: context.colors.textPrimary,
                     fontSize: 14,
                     height: 1.6,
                   ),
@@ -542,9 +550,9 @@ class _MenuScanScreenState extends ConsumerState<MenuScanScreen> {
                   icon: const Icon(Icons.refresh),
                   label: const Text('다시 찍기'),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.textPrimary,
+                    foregroundColor: context.colors.textPrimary,
                     side: BorderSide(
-                      color: AppColors.textSecondary.withValues(alpha: 0.3),
+                      color: context.colors.textSecondary.withValues(alpha: 0.3),
                     ),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
@@ -560,7 +568,7 @@ class _MenuScanScreenState extends ConsumerState<MenuScanScreen> {
                   icon: const Icon(Icons.mic),
                   label: const Text('이대로 추천 받기'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
+                    backgroundColor: context.colors.primary,
                     foregroundColor: Colors.black,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(

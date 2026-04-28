@@ -3,8 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../core/constants/app_colors.dart';
+import '../../../../core/theme/theme_context_ext.dart';
 import '../../../chat/presentation/providers/chat_provider.dart';
+import '../providers/theme_mode_provider.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -51,13 +52,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         SnackBar(
           content: Text(
             key.isEmpty
-                ? '내 키를 지웠어요. 이제 공용 쿼터로 쓰게 됩니다.'
-                : '내 Kanana-o 키를 저장했어요. 이제 무제한으로 쓸 수 있어요!',
+                ? '키를 지웠어요. 다시 입력해야 사용할 수 있어요.'
+                : 'Kanana-o 키를 저장했어요!',
           ),
           duration: const Duration(seconds: 2),
         ),
       );
-      if (mounted) context.pop();
+      // 키가 비어있으면 라우팅 가드가 다시 여기로 돌려보낼 거라 pop 의미 없음.
+      // 키가 있을 때만 이전 화면으로 복귀.
+      if (mounted && key.isNotEmpty) context.pop();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -71,14 +74,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final hasKey = (ref.watch(userApiKeyProvider)?.isNotEmpty ?? false);
+    // dart-define으로 키가 빌드에 박혀 있으면 뒤로 갈 수 있음 (개발자 본인 빌드)
+    final hasEffectiveKey =
+        ref.watch(effectiveApiKeyProvider).isNotEmpty;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('설정'),
-        leading: IconButton(
-          icon: const Icon(Icons.close),
-          onPressed: () => context.pop(),
-        ),
+        leading: hasEffectiveKey
+            ? IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => context.pop(),
+              )
+            : null,
+        automaticallyImplyLeading: false,
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -86,37 +95,37 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 상단 배너 — 현재 모드 표시
+              // 상단 배너 — 키 상태 표시
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
                   color: hasKey
-                      ? AppColors.primary.withValues(alpha: 0.15)
-                      : AppColors.surface,
+                      ? context.colors.primary.withValues(alpha: 0.15)
+                      : context.colors.surface,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: hasKey
-                        ? AppColors.primary
+                        ? context.colors.primary
                         : Colors.white.withValues(alpha: 0.1),
                   ),
                 ),
                 child: Row(
                   children: [
                     Icon(
-                      hasKey ? Icons.vpn_key : Icons.public,
-                      color: hasKey ? AppColors.primary : AppColors.textSecondary,
+                      hasKey ? Icons.vpn_key : Icons.lock_outline,
+                      color: hasKey ? context.colors.primary : context.colors.textSecondary,
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
                         hasKey
-                            ? '내 키 모드 — 본인 Kanana-o 쿼터로 무제한 사용'
-                            : '공용 모드 — 하루 20명 선착순, 일 20회까지',
+                            ? '키 등록됨 — 본인 Kanana-o 쿼터로 사용 중'
+                            : 'Kanana-o API 키를 입력해주세요',
                         style: TextStyle(
                           fontSize: 13,
                           color: hasKey
-                              ? AppColors.textPrimary
-                              : AppColors.textSecondary,
+                              ? context.colors.textPrimary
+                              : context.colors.textSecondary,
                           fontWeight:
                               hasKey ? FontWeight.bold : FontWeight.normal,
                         ),
@@ -128,21 +137,61 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
               const SizedBox(height: 24),
 
-              const Text(
-                'Kanana-o API 키 (선택)',
+              // ─── 테마 ─────────────────────────────────────
+              Text(
+                '🎨 테마',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
+                  color: context.colors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 12),
+              SegmentedButton<ThemeMode>(
+                segments: const [
+                  ButtonSegment(
+                    value: ThemeMode.system,
+                    label: Text('시스템'),
+                    icon: Icon(Icons.brightness_auto),
+                  ),
+                  ButtonSegment(
+                    value: ThemeMode.light,
+                    label: Text('라이트'),
+                    icon: Icon(Icons.light_mode),
+                  ),
+                  ButtonSegment(
+                    value: ThemeMode.dark,
+                    label: Text('다크'),
+                    icon: Icon(Icons.dark_mode),
+                  ),
+                ],
+                selected: {ref.watch(themeModeProvider)},
+                onSelectionChanged: (set) {
+                  if (set.isNotEmpty) setThemeMode(ref, set.first);
+                },
+                style: ButtonStyle(
+                  visualDensity: VisualDensity.compact,
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              Text(
+                'Kanana-o API 키',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: context.colors.textPrimary,
                 ),
               ),
               const SizedBox(height: 6),
-              const Text(
-                '본인 Kanana-o API 키를 입력하면 공용 쿼터와 상관없이 바로 쓸 수 있어요. '
-                '키는 이 기기에만 저장되고 서버로 전송되지 않습니다.',
+              Text(
+                '본인의 Kanana-o API 키가 있어야 앱이 동작합니다. '
+                '키는 이 기기에만 저장되고 서버로 전송되지 않습니다. '
+                '호출 비용은 본인의 Kanana-o 계정으로 청구됩니다.',
                 style: TextStyle(
                   fontSize: 12,
-                  color: AppColors.textSecondary,
+                  color: context.colors.textSecondary,
                   height: 1.5,
                 ),
               ),
@@ -155,7 +204,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 decoration: InputDecoration(
                   hintText: 'kanana-... 로 시작하는 API 키',
                   filled: true,
-                  fillColor: AppColors.surface,
+                  fillColor: context.colors.surface,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide.none,
@@ -194,7 +243,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     child: ElevatedButton(
                       onPressed: _saving ? null : _save,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
+                        backgroundColor: context.colors.primary,
                         foregroundColor: Colors.black,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
@@ -228,9 +277,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                               _save();
                             },
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.recordingRed,
-                        side: const BorderSide(
-                          color: AppColors.recordingRed,
+                        foregroundColor: context.colors.recordingRed,
+                        side: BorderSide(
+                          color: context.colors.recordingRed,
                         ),
                         padding: const EdgeInsets.symmetric(
                             vertical: 16, horizontal: 20),
@@ -249,18 +298,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: AppColors.surface,
+                  color: context.colors.surface,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Kanana-o API 키는 어디서 받나요?',
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary,
+                        color: context.colors.textPrimary,
                       ),
                     ),
                     const SizedBox(height: 6),
@@ -269,7 +318,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       '공식 문서는 HuggingFace의 Kanana-1.5-o-9.8B-instruct-2602-API_Doc 참고.',
                       style: TextStyle(
                         fontSize: 12,
-                        color: AppColors.textSecondary.withValues(alpha: 0.8),
+                        color: context.colors.textSecondary.withValues(alpha: 0.8),
                         height: 1.5,
                       ),
                     ),

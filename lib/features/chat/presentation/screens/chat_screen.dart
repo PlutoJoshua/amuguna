@@ -2,14 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../core/constants/app_colors.dart';
+import '../../../../core/theme/theme_context_ext.dart';
 import '../../../../core/constants/app_strings.dart';
-import '../../../../core/services/api_usage_service.dart';
 import '../../data/models/chat_message.dart';
 import '../providers/chat_provider.dart';
 import '../widgets/message_bubble.dart';
 import '../widgets/quick_reply_chips.dart';
-import '../widgets/quota_exhausted_overlay.dart';
 import '../widgets/record_button.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
@@ -67,13 +65,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         });
       }
     });
-
-    final remainingCalls = ref.watch(remainingCallsProvider);
-
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: AppColors.textSecondary),
+          icon: Icon(Icons.arrow_back_ios, color: context.colors.textSecondary),
           onPressed: () {
             ref.read(chatNotifierProvider.notifier).resetSession();
             context.go('/');
@@ -91,34 +86,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           ],
         ),
         actions: [
-          // API 호출 카운터
-          Center(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: remainingCalls <= 5
-                      ? AppColors.recordingRed.withValues(alpha: 0.5)
-                      : AppColors.primary.withValues(alpha: 0.3),
-                ),
-              ),
-              child: Text(
-                '🎫 $remainingCalls/${ApiUsageService.dailyLimit}',
-                style: TextStyle(
-                  color: remainingCalls <= 5
-                      ? AppColors.recordingRed
-                      : AppColors.primary,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 4),
           IconButton(
-            icon: const Icon(Icons.refresh, color: AppColors.textSecondary),
+            icon: Icon(Icons.refresh, color: context.colors.textSecondary),
             onPressed: () {
               ref.read(chatNotifierProvider.notifier).resetSession();
             },
@@ -138,10 +107,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 child: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: AppColors.surface,
+                    color: context.colors.surface,
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: AppColors.primary.withValues(alpha: 0.3),
+                      color: context.colors.primary.withValues(alpha: 0.3),
                       width: 0.5,
                     ),
                   ),
@@ -164,8 +133,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           children: [
                             Text(
                               '메뉴판 사진 ${chatState.menuPhotoCount}장 분석됨',
-                              style: const TextStyle(
-                                color: AppColors.textPrimary,
+                              style: TextStyle(
+                                color: context.colors.textPrimary,
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -175,7 +144,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                               '이 메뉴 안에서만 추천해드려요',
                               style: TextStyle(
                                 color:
-                                    AppColors.textSecondary.withValues(alpha: 0.8),
+                                    context.colors.textSecondary.withValues(alpha: 0.8),
                                 fontSize: 11,
                               ),
                             ),
@@ -184,7 +153,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       ),
                       Icon(
                         Icons.image_search,
-                        color: AppColors.primary.withValues(alpha: 0.6),
+                        color: context.colors.primary.withValues(alpha: 0.6),
                         size: 18,
                       ),
                     ],
@@ -253,20 +222,19 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 },
               ),
 
+            // "이걸로 결정!" 수동 트리거 — 모델이 [DECISION] 태그를 빠뜨리거나
+            // 룰베이스가 못 잡는 식당 고유 메뉴(예: "서울 미트볼") 케이스 대응.
+            if (chatState.turnCount >= 1 &&
+                chatState.decision == null &&
+                !chatState.isStreaming &&
+                !chatState.isRecording)
+              _buildDecideButton(chatState),
+
             // 입력 영역
             _buildInputArea(chatState),
           ],
         ),
           ),
-          // 쿼터 소진 오버레이
-          if (chatState.quotaExhausted)
-            QuotaExhaustedOverlay(
-              onGoHome: () {
-                ref.read(chatNotifierProvider.notifier).resetSession();
-                context.go('/');
-              },
-              onOpenSettings: () => context.push('/settings'),
-            ),
         ],
       ),
     );
@@ -276,7 +244,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: context.colors.surface,
         border: Border(
           top: BorderSide(
             color: Colors.white.withValues(alpha: 0.05),
@@ -291,20 +259,20 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               Expanded(
                 child: Container(
                   decoration: BoxDecoration(
-                    color: AppColors.background,
+                    color: context.colors.background,
                     borderRadius: BorderRadius.circular(24),
                   ),
                   child: TextField(
                     controller: _textController,
                     focusNode: _focusNode,
-                    style: const TextStyle(
-                      color: AppColors.textPrimary,
+                    style: TextStyle(
+                      color: context.colors.textPrimary,
                       fontSize: 14,
                     ),
                     decoration: InputDecoration(
                       hintText: AppStrings.textInputHint,
                       hintStyle: TextStyle(
-                        color: AppColors.textSecondary.withValues(alpha: 0.5),
+                        color: context.colors.textSecondary.withValues(alpha: 0.5),
                       ),
                       border: InputBorder.none,
                       contentPadding: const EdgeInsets.symmetric(
@@ -313,8 +281,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       ),
                       suffixIcon: _textController.text.isNotEmpty
                           ? IconButton(
-                              icon: const Icon(Icons.send,
-                                  color: AppColors.primary, size: 20),
+                              icon: Icon(Icons.send,
+                                  color: context.colors.primary, size: 20),
                               onPressed: _sendText,
                             )
                           : null,
@@ -349,8 +317,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   chatState.isStreaming
                       ? AppStrings.processing
                       : AppStrings.tapToRecord,
-                  style: const TextStyle(
-                    color: AppColors.textSecondary,
+                  style: TextStyle(
+                    color: context.colors.textSecondary,
                     fontSize: 12,
                   ),
                 ),
@@ -365,6 +333,149 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     _textController.clear();
     _focusNode.unfocus();
     ref.read(chatNotifierProvider.notifier).sendTextMessage(text);
+  }
+
+  Widget _buildDecideButton(ChatState chatState) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+      child: Align(
+        alignment: Alignment.centerRight,
+        child: Material(
+          color: context.colors.primary.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(20),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(20),
+            onTap: () => _showDecisionSheet(chatState),
+            child: Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('🎯', style: TextStyle(fontSize: 14)),
+                  const SizedBox(width: 6),
+                  Text(
+                    '이걸로 결정!',
+                    style: TextStyle(
+                      color: context.colors.primary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showDecisionSheet(ChatState chatState) {
+    final controller =
+        TextEditingController(text: _suggestDecision(chatState) ?? '');
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: context.colors.surface,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetCtx) => Padding(
+        padding:
+            EdgeInsets.only(bottom: MediaQuery.of(sheetCtx).viewInsets.bottom),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  '오늘의 결정',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: context.colors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '메뉴명을 확인하고 확정해주세요',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: context.colors.textSecondary.withValues(alpha: 0.8),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: controller,
+                  autofocus: true,
+                  style: TextStyle(
+                      color: context.colors.textPrimary, fontSize: 15),
+                  decoration: InputDecoration(
+                    filled: true,
+                    fillColor: context.colors.background,
+                    hintText: '예: 김치찌개',
+                    hintStyle: TextStyle(
+                      color: context.colors.textSecondary.withValues(alpha: 0.5),
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 14),
+                  ),
+                  onSubmitted: (_) => _confirmDecisionFromSheet(
+                      sheetCtx, controller.text),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () => _confirmDecisionFromSheet(
+                      sheetCtx, controller.text),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: context.colors.primary,
+                    foregroundColor: Colors.black,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    '🎯 이걸로 결정!',
+                    style:
+                        TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _confirmDecisionFromSheet(BuildContext sheetCtx, String raw) {
+    final value = raw.trim();
+    if (value.isEmpty) return;
+    Navigator.pop(sheetCtx);
+    ref.read(chatNotifierProvider.notifier).confirmDecision(value);
+  }
+
+  /// 가장 최근 어시스턴트 메시지에서 굵은 글씨(`**메뉴명**`)를 우선 추출.
+  /// AI가 Mode B에서 메뉴를 추천할 때 보통 굵게 표시하므로 좋은 기본값.
+  String? _suggestDecision(ChatState chatState) {
+    for (final m in chatState.messages.reversed) {
+      if (m.role != MessageRole.assistant) continue;
+      final match = RegExp(r'\*\*([^*\n]{1,40})\*\*').firstMatch(m.text);
+      if (match != null) {
+        return match.group(1)?.trim();
+      }
+    }
+    return null;
   }
 }
 
@@ -409,7 +520,7 @@ class _TypingIndicatorState extends State<_TypingIndicator>
               height: 8,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: AppColors.textSecondary.withValues(alpha: opacity),
+                color: context.colors.textSecondary.withValues(alpha: opacity),
               ),
             );
           }),
@@ -441,7 +552,7 @@ class _AudioWaveBar extends StatelessWidget {
           width: 3,
           height: barHeight,
           decoration: BoxDecoration(
-            color: AppColors.recordingRed,
+            color: context.colors.recordingRed,
             borderRadius: BorderRadius.circular(2),
           ),
         );

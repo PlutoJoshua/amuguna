@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../core/constants/app_colors.dart';
+import '../../../../core/theme/theme_context_ext.dart';
 import '../../../chat/presentation/providers/chat_provider.dart';
 import '../../data/models/decision_type.dart';
 import '../../data/services/type_classifier.dart';
@@ -63,7 +63,7 @@ class _DecisionScreenState extends ConsumerState<DecisionScreen>
     );
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: context.colors.background,
       body: Stack(
         children: [
           SafeArea(
@@ -86,12 +86,12 @@ class _DecisionScreenState extends ConsumerState<DecisionScreen>
               numberOfParticles: 25,
               gravity: 0.1,
               emissionFrequency: 0.03,
-              colors: const [
-                AppColors.primary,
-                AppColors.intuit,
-                AppColors.analyst,
-                AppColors.vibe,
-                AppColors.zen,
+              colors: [
+                context.colors.primary,
+                context.colors.intuit,
+                context.colors.analyst,
+                context.colors.vibe,
+                context.colors.zen,
               ],
             ),
           ),
@@ -108,10 +108,10 @@ class _DecisionScreenState extends ConsumerState<DecisionScreen>
         const Spacer(),
         const Text('🍜', style: TextStyle(fontSize: 64)),
         const SizedBox(height: 24),
-        const Text(
+        Text(
           '오늘의 결정',
           style: TextStyle(
-            color: AppColors.textSecondary,
+            color: context.colors.textSecondary,
             fontSize: 16,
           ),
         ),
@@ -121,8 +121,8 @@ class _DecisionScreenState extends ConsumerState<DecisionScreen>
           scale: _scaleAnimation,
           child: Text(
             decision,
-            style: const TextStyle(
-              color: AppColors.textPrimary,
+            style: TextStyle(
+              color: context.colors.textPrimary,
               fontSize: 36,
               fontWeight: FontWeight.bold,
             ),
@@ -132,13 +132,13 @@ class _DecisionScreenState extends ConsumerState<DecisionScreen>
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           decoration: BoxDecoration(
-            color: AppColors.surface,
+            color: context.colors.surface,
             borderRadius: BorderRadius.circular(20),
           ),
           child: Text(
             '결정까지 걸린 시간: ${seconds}초',
-            style: const TextStyle(
-              color: AppColors.textSecondary,
+            style: TextStyle(
+              color: context.colors.textSecondary,
               fontSize: 14,
             ),
           ),
@@ -149,7 +149,7 @@ class _DecisionScreenState extends ConsumerState<DecisionScreen>
           child: ElevatedButton(
             onPressed: () => setState(() => _showTypeCard = true),
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
+              backgroundColor: context.colors.primary,
               foregroundColor: Colors.black,
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(
@@ -168,9 +168,9 @@ class _DecisionScreenState extends ConsumerState<DecisionScreen>
             ref.read(chatNotifierProvider.notifier).resetSession();
             context.go('/');
           },
-          child: const Text(
+          child: Text(
             '처음으로 돌아가기',
-            style: TextStyle(color: AppColors.textSecondary),
+            style: TextStyle(color: context.colors.textSecondary),
           ),
         ),
       ],
@@ -185,8 +185,8 @@ class _DecisionScreenState extends ConsumerState<DecisionScreen>
         Align(
           alignment: Alignment.centerLeft,
           child: IconButton(
-            icon: const Icon(Icons.arrow_back_ios,
-                color: AppColors.textSecondary),
+            icon: Icon(Icons.arrow_back_ios,
+                color: context.colors.textSecondary),
             onPressed: () => setState(() => _showTypeCard = false),
           ),
         ),
@@ -205,7 +205,7 @@ class _DecisionScreenState extends ConsumerState<DecisionScreen>
               context.go('/');
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
+              backgroundColor: context.colors.primary,
               foregroundColor: Colors.black,
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(

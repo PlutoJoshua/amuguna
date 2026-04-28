@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/constants/app_colors.dart';
+import '../../../../core/theme/theme_context_ext.dart';
 import '../../data/models/chat_message.dart';
 
 class EmotionGauge extends StatelessWidget {
@@ -10,13 +10,13 @@ class EmotionGauge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final emotions = _getActiveEmotions();
+    final emotions = _getActiveEmotions(context);
     if (emotions.isEmpty) return const SizedBox.shrink();
 
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.surface.withValues(alpha: 0.7),
+        color: context.colors.surface.withValues(alpha: 0.7),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -24,34 +24,34 @@ class EmotionGauge extends StatelessWidget {
         children: emotions
             .map((e) => Padding(
                   padding: const EdgeInsets.only(bottom: 6),
-                  child: _buildBar(e.label, e.value, e.color),
+                  child: _buildBar(context, e.label, e.value, e.color),
                 ))
             .toList(),
       ),
     );
   }
 
-  List<_EmotionEntry> _getActiveEmotions() {
+  List<_EmotionEntry> _getActiveEmotions(BuildContext context) {
     final all = [
-      _EmotionEntry('피곤함', emotion.tired, AppColors.emotionTired),
-      _EmotionEntry('기대감', emotion.excited, AppColors.emotionExcited),
-      _EmotionEntry('스트레스', emotion.stressed, AppColors.emotionStressed),
-      _EmotionEntry('망설임', emotion.hesitant, AppColors.emotionHesitant),
+      _EmotionEntry('피곤함', emotion.tired, context.colors.emotionTired),
+      _EmotionEntry('기대감', emotion.excited, context.colors.emotionExcited),
+      _EmotionEntry('스트레스', emotion.stressed, context.colors.emotionStressed),
+      _EmotionEntry('망설임', emotion.hesitant, context.colors.emotionHesitant),
     ];
     // 20% 이상인 감정만 표시
     return all.where((e) => e.value >= 20).toList()
       ..sort((a, b) => b.value.compareTo(a.value));
   }
 
-  Widget _buildBar(String label, int value, Color color) {
+  Widget _buildBar(BuildContext context, String label, int value, Color color) {
     return Row(
       children: [
         SizedBox(
           width: 52,
           child: Text(
             label,
-            style: const TextStyle(
-              color: AppColors.textSecondary,
+            style: TextStyle(
+              color: context.colors.textSecondary,
               fontSize: 11,
             ),
           ),
