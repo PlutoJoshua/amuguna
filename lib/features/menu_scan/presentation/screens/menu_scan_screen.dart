@@ -10,6 +10,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../../../core/theme/theme_context_ext.dart';
 import '../../../../core/constants/app_strings.dart';
+import '../../../../core/widgets/markdown_text.dart';
 import '../../../chat/presentation/providers/chat_provider.dart';
 
 /// 메뉴 스캔 진행 단계
@@ -529,7 +530,7 @@ class _MenuScanScreenState extends ConsumerState<MenuScanScreen> {
                 ],
               ),
               child: SingleChildScrollView(
-                child: Text(
+                child: MarkdownText(
                   _analysisResult ?? '',
                   style: TextStyle(
                     color: context.colors.textPrimary,
