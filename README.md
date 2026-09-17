@@ -1,5 +1,9 @@
 # 🍜 아무거나 (amuguna)
 
+> 이 앱을 만들며 Kanana-o 멀티모달을 Flutter에 붙인 과정과 비결정성 처리 패턴은
+> [블로그 글](https://from0lab.com/kanana-flutter-integration/)에 정리했습니다.
+
+
 > **"아무거나라고 했지만, 진짜 원하는 건 따로 있잖아"**
 >
 > Kanana-o 멀티모달 AI로 목소리에서 숨은 선호를 읽어주는 의사결정 도우미
